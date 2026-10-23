@@ -372,7 +372,7 @@ function fillPresets() {
   const groups = {};
   for (const [key, title, group, slot] of S.presets) {
     if (!groups[group]) { groups[group] = el("optgroup"); groups[group].label = group; s.append(groups[group]); }
-    const o = el("option", null, slot ? `${slot} · ${title}` : title); o.value = key; groups[group].append(o);
+    const o = el("option", null, slot ? `${title}  (${slot})` : title); o.value = key; groups[group].append(o);
   }
   if (!S.current) { const o = el("option", null, "（未保存的新预设）"); o.value = ""; s.prepend(o); }
   s.value = S.current || ""; s.dataset.sig = sig;

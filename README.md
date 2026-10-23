@@ -4,13 +4,11 @@ A living particle wallpaper. Tens of thousands of particles orbit, flock,
 flow and burst behind your desktop icons, built from a small set of rules
 that can be stacked into layers and tuned live from a browser panel.
 
-| 1 双星系 Binary Galaxy | 2 奇异吸引子 Strange Attractor | 3 曼陀罗 Mandala |
-| --- | --- | --- |
-| ![](docs/1_galaxy.jpg) | ![](docs/2_attractor.jpg) | ![](docs/3_mandala.jpg) |
-| **4 星轨 Orrery** | **5 鸟群 Murmuration** | **6 弹性布 Fabric** |
-| ![](docs/4_orrery.jpg) | ![](docs/5_murmuration.jpg) | ![](docs/6_fabric.jpg) |
-| **7 墨流 Ink** | **8 雪景球 Snow Globe** | **9 烟花 Fireworks** |
-| ![](docs/7_ink.jpg) | ![](docs/8_snow_globe.jpg) | ![](docs/9_fireworks.jpg) |
+![all presets](docs/all.jpg)
+
+37 built-in universes in four groups (宇宙 · 自然 · 几何 · 流体与互动), picked from the
+menu bar; the first nine also sit on hotkeys 1–9. Every one is a few hundred
+bytes of parameters over the same engine, and the panel lets you make your own.
 
 ## Run
 
@@ -75,11 +73,19 @@ the schema at the bottom of that file.
 
 ## Presets
 
-The nine built-ins are read-only and live on keys 1–9. Your own presets are
-JSON files in `presets_user/`, created from the panel: **新建** (blank),
-**保存** (update), **另存为** (create), **重命名**, **删除**. Unsaved edits are
-autosaved every few seconds as **上次的实验**, and the app reopens on the
-preset you used last.
+| Group | Presets |
+| --- | --- |
+| 宇宙 | 双星系 ¹ · 奇异吸引子 ² · 星轨 ⁴ · 黑洞 · 彗星 · 超新星 · 土星环 · 星云 · 掌中宇宙 · 潮汐 |
+| 自然 | 鸟群 ⁵ · 雪景球 ⁸ · 烟花 ⁹ · 鱼群 · 萤火虫 · 雨 · 蒲公英 · 篝火 · 沙漏 · 水面 · 鬼火 · 蜂群 · 流星雨 |
+| 几何 | 曼陀罗 ³ · 利萨如 · 谐振子 · 万花筒 · 漩涡 · 原子 · 光环 · 心跳 |
+| 流体与互动 | 弹性布 ⁶ · 墨流 ⁷ · 香烟 · 熔岩灯 · 磁铁 · 涟漪 |
+
+Superscripts are the hotkey slots. Each preset's description (what it is
+made of, and what the mouse does to it) shows in the panel. The built-ins are
+read-only; your own presets are JSON files in `presets_user/`, created from
+the panel: **新建** (blank), **保存** (update), **另存为** (create), **重命名**,
+**删除**. Unsaved edits are autosaved every few seconds as **上次的实验**, and
+the app reopens on the preset you used last.
 
 ## Layout
 

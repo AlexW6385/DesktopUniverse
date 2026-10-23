@@ -183,11 +183,13 @@ def neighbourhood(pos, vel, world, cell, pressure, align) -> np.ndarray:
     cnt = np.bincount(idx, minlength=gw * gh).astype(float)
     acc = np.zeros_like(pos)
     if pressure:
-        dens = _blur((cnt / max(cnt.mean(), 1e-9)).reshape(gh, gw))
+        # log density: a cell holding the whole swarm must not launch it into orbit
+        dens = _blur(np.log1p(cnt / max(cnt.mean(), 1e-9)).reshape(gh, gw))
         gy, gx = np.gradient(dens)
         fx, fy = pos[:, 0] / cell - 0.5, pos[:, 1] / cell - 0.5
         acc[:, 0] -= pressure * _bilinear(gx, fx, fy)
         acc[:, 1] -= pressure * _bilinear(gy, fx, fy)
+        np.clip(acc, -3.0, 3.0, out=acc)
     if align:
         n = np.maximum(cnt, 1)
         mx = np.bincount(idx, vel[:, 0], minlength=gw * gh) / n
@@ -656,11 +658,13 @@ class Universe:
                 if tint is not None:
                     spr, o = swarm.sprite(tint, additive)
                     jobs += [(spr, (x - o, y - o)) for x, y in xy]
-                else:
-                    q = (col // 12 * 12)
-                    for (x, y), c in zip(xy, q):
+                else:                                    # a few tints: one sprite per tint
+                    q = (col // 16 * 16).astype(int)
+                    tints, inv = np.unique(q, axis=0, return_inverse=True)
+                    for i, c in enumerate(tints):
                         spr, o = swarm.sprite(c, additive)
-                        jobs.append((spr, (x - o, y - o)))
+                        pts = xy[inv.ravel() == i] - o
+                        jobs += [(spr, (x, y)) for x, y in pts]
             if flags:
                 for spr, at in jobs:
                     self.screen.blit(spr, at, special_flags=flags)

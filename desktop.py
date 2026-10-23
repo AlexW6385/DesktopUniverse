@@ -228,10 +228,22 @@ class MacControls:
             target_menu.addItem_(it)
             return it
 
-        for key, title, group, slot, _ in listing:
-            if slot:
-                add(title, f"load:{key}", str(slot), key == current)
-        mine = [row for row in listing if row[2] != "内置"]
+        # built-ins by group, as submenus; the first nine carry ⌃⌥1-9
+        groups: dict = {}
+        for key, title, group, slot, editable in listing:
+            groups.setdefault(group, []).append((key, title, slot, editable))
+        for group, rows in groups.items():
+            if all(e for *_, e in rows) or group == "自动保存":
+                continue
+            sub = AppKit.NSMenu.alloc().init()
+            sub.setAutoenablesItems_(False)
+            for key, title, slot, _ in rows:
+                add(title, f"load:{key}", str(slot) if slot else "", key == current, into=sub)
+            label = group + ("  ·  " + next(t for k, t, *_ in rows if k == current) if any(k == current for k, *_ in rows) else "")
+            holder = AppKit.NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(label, None, "")
+            holder.setSubmenu_(sub)
+            menu.addItem_(holder)
+        mine = [row for row in listing if row[4] or row[2] == "自动保存"]
         if mine:
             add("")
             for key, title, *_ in mine:

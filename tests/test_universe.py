@@ -113,8 +113,9 @@ def test_builtin_runs_and_round_trips(key):
         assert np.isfinite(s.pos).all() and np.isfinite(s.vel).all()
 
 
-def test_nine_builtins():
-    assert len(presets.BUILTIN_KEYS) == 9
+def test_slots_are_builtins():
+    assert len(presets.SLOTS) == 9 and all(k in presets.BUILTIN_KEYS for k in presets.SLOTS)
+    assert len(set(presets.BUILTIN_KEYS)) == len(presets.BUILTIN_KEYS)
 
 
 def test_live_reconfigure_keeps_bodies():

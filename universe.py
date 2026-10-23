@@ -103,9 +103,8 @@ class App:
             self.library.remember(key)
 
     def slot(self, n):
-        keys = presets.BUILTIN_KEYS
-        if 1 <= n <= len(keys):
-            self.load(keys[n - 1])
+        if 1 <= n <= len(presets.SLOTS):
+            self.load(presets.SLOTS[n - 1])
 
     def cycle(self, step):
         keys = [k for k in self.library.keys() if k != presets.AUTOSAVE]
@@ -265,7 +264,7 @@ class App:
     def overlay(self):
         lines = []
         if time.time() < self.banner_until or self.show_info:
-            slot = presets.BUILTIN_KEYS.index(self.key) + 1 if self.key in presets.BUILTIN_KEYS else None
+            slot = presets.SLOTS.index(self.key) + 1 if self.key in presets.SLOTS else None
             lines.append(f"{slot} · {self.preset.title}" if slot else self.preset.title)
         if self.show_info:
             counts = "  ".join(f"{k} {v}" for k, v in self.universe.counts().items())
@@ -348,8 +347,8 @@ def main():
             print(f"{slot or ' '}  {key:14s} {title:10s} [{group}]  {levels}")
         return
     key = args.preset
-    if key and key.isdigit() and 1 <= int(key) <= len(presets.BUILTIN_KEYS):
-        key = presets.BUILTIN_KEYS[int(key) - 1]
+    if key and key.isdigit() and 1 <= int(key) <= len(presets.SLOTS):
+        key = presets.SLOTS[int(key) - 1]
     if key and key not in lib:
         sys.exit(f"unknown preset {key!r}; try --list")
     size = tuple(map(int, args.window.lower().split("x"))) if args.window else None
