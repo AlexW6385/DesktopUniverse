@@ -1219,7 +1219,11 @@ class Universe:
             if L.wind and wind.any():
                 forces.append(wind * L.wind)
             if L.home:
-                forces.append((swarm.home - swarm.pos) * L.home)
+                d = swarm.home - swarm.pos
+                if p.edge == "wrap":                   # the short way round: wrapping must not pump the spring
+                    size = np.asarray(self.world, float)
+                    d -= size * np.round(d / size)
+                forces.append(d * L.home)
             if L.pressure or L.align:
                 forces.append(neighbourhood(swarm.pos, swarm.vel, self.world, L.cell, L.pressure, L.align))
             if L.jitter:

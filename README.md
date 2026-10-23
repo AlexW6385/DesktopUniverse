@@ -1,5 +1,8 @@
 # DesktopUniverse
 
+**▶ Play it in the browser: <https://alexw6385.github.io/DesktopUniverse/>** (the same engine and presets,
+ported to JavaScript and WebGL)
+
 A living particle wallpaper. Tens of thousands of particles orbit, flock,
 flow and burst behind your desktop icons, built from a small set of rules
 that can be stacked into layers and tuned live from a browser panel.
@@ -91,6 +94,24 @@ the panel: **新建** (blank), **保存** (update), **另存为** (create), **�
 **删除**. Unsaved edits are autosaved every few seconds as **上次的实验**, and
 the app reopens on the preset you used last.
 
+## Web version
+
+`web/` is the same universe in a browser: the engine ported to JavaScript (`web/js/engine.js`), drawn
+with WebGL (`web/js/render.js`), with a gallery of every preset, autoplay and the same tuning panel
+(`web/js/panel.js`, built from the same schema). Presets you make there are kept in the browser, and
+**导出** downloads them as JSON that the desktop app reads from `presets_user/` (and **导入** reads
+those files back).
+
+The presets themselves are not copied by hand: `python web/export.py` writes them, the groups, the
+hotkey slots and the panel schema from `presets.py` and `config.py` into `web/data.js` (and makes the
+gallery thumbnails from `docs/`). On every push to `main`, a GitHub Action runs the export and
+publishes `web/` to the `gh-pages` branch, which GitHub Pages serves. To try it locally:
+
+```bash
+python web/export.py
+python -m http.server -d web 8000     # then open http://localhost:8000
+```
+
 ## Layout
 
 ```
@@ -100,6 +121,7 @@ config.py       the data model and the panel schema
 presets.py      the built-ins and the preset library
 panel.py/.html  the local tuning panel
 desktop.py      macOS: wallpaper window, menu bar, hotkeys, global cursor
+web/            the browser version (GitHub Pages)
 tests/          forces, mechanisms, every preset, the library (python -m pytest tests)
 ```
 

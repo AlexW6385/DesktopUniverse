@@ -111,6 +111,16 @@ def test_text_bodies_settle_on_the_glyphs():
     assert (s.home[:, 0] > 0).all() and (s.home[:, 0] < 500).all()
 
 
+def test_springs_take_the_short_way_round_a_wrapping_screen():
+    # bodies that overshoot and wrap around must not be flung back the long way (which pumps energy in)
+    layer = Layer("txt", 3000, [], spawn="text", text="1:23", text_size=0.4, home=0.012, damping=0.06,
+                  velocity="zero")
+    u, _ = world([layer], size=(900, 500), friction=0.0, edge="wrap")
+    run(u, 600)
+    s = u.swarms[0]
+    assert np.hypot(*(s.pos - s.home).T).max() < 5 and np.abs(s.vel).max() < 2
+
+
 def test_new_text_retargets_without_reshuffling_everyone():
     layer = Layer("txt", 800, [], spawn="text", text="1|7", text_period=1.0, home=0.03, damping=0.2,
                   velocity="zero")

@@ -1,0 +1,32 @@
+name: Publish the web version
+
+# Every push to main that touches the web version or the presets re-exports the presets
+# (web/export.py) and publishes web/ to the gh-pages branch, which GitHub Pages serves.
+on:
+  push:
+    branches: [main]
+    paths: ["web/**", "presets.py", "config.py", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Export the presets
+        run: python web/export.py
+      - name: Push web/ to gh-pages
+        run: |
+          cd web
+          git init -q -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Publish ${GITHUB_SHA::7}"
+          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
