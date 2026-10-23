@@ -7,9 +7,11 @@ DesktopUniverse: a living particle wallpaper.
     python universe.py --fullscreen
     python universe.py --list
 
-Control it from the menu-bar ✦, the hotkeys ⌃⌥1-9 / ⌃⌥P / ⌃⌥C / ⌃⌥R, or the
-tuning panel at http://127.0.0.1:8765 (every parameter, live; create, save,
-rename and delete your own presets). When the window has focus (not in
+Control it without leaving the wallpaper: the menu-bar ✦ (presets, next /
+previous, timed rotation, pause, start at login, quit) or the hotkeys
+⌃⌥1-9, ⌃⌥← / ⌃⌥→, ⌃⌥P, ⌃⌥C, ⌃⌥R. The tuning panel at http://127.0.0.1:8765 is
+only for editing (every parameter, live; create, save, rename and delete your
+own presets) and never opens by itself in wallpaper mode. When the window has focus (not in
 wallpaper mode): 1-9 presets, ← → all presets, Space pause, C clear,
 R restart, F info, [ ] frame cap, Esc / Q quit.
 """
@@ -34,7 +36,7 @@ from panel import Panel
 
 class App:
     def __init__(self, key=None, fps=60, mode="wallpaper", size=None, port=8765,
-                 open_panel=None, global_mouse=False):
+                 open_panel=None, global_mouse=False, rotate=None):
         os.environ.setdefault("SDL_VIDEO_CENTERED", "1")
         pygame.init()
         self.screen = pygame.display.set_mode(size or (0, 0), 0 if size else pygame.NOFRAME)
@@ -65,6 +67,8 @@ class App:
 
         self.inbox: queue.Queue = queue.Queue()
         self.library = presets.Library()
+        self.rotate = float(rotate if rotate is not None else self.library.state().get("rotate", 0))
+        self.switched_at = time.time()
         start = key or self.library.last() or presets.DEFAULT
         self.load(start if start in self.library else presets.DEFAULT)
 
@@ -77,13 +81,15 @@ class App:
         self.controls = desktop.MacControls(lambda cmd, data: self.inbox.put((cmd, data)))
 
         print(f"mode: {self.mode} · mouse: {how} · menu bar: {'yes' if self.controls.ok else 'no'}"
-              f" · hotkeys: {'⌃⌥1-9' if self.controls.hotkeys else 'no'}")
+              f" · hotkeys: {'⌃⌥1-9' if self.controls.hotkeys else 'no'}"
+              f" · rotate: {f'every {self.rotate:g} min' if self.rotate else 'off'}")
         if self.panel:
-            print(f"panel: {self.panel.url}")
-            if open_panel or (open_panel is None and (self.mode != "wallpaper" or not self.controls.ok)):
+            print(f"panel (for editing): {self.panel.url}")
+            # a wallpaper should just run: the browser opens only when asked for
+            if open_panel or (open_panel is None and self.mode != "wallpaper"):
                 webbrowser.open(self.panel.url)
-        if self.mode == "wallpaper" and not (self.panel or self.controls.ok):
-            print("nothing can control the wallpaper: quit with Ctrl+C here")
+        if self.mode == "wallpaper" and not self.controls.ok:
+            print("no menu bar: switch with ⌃⌥1-9 if hotkeys are on, quit with Ctrl+C here")
 
     # ---------------------------------------------------------- presets
     def load(self, key, preset=None):
@@ -91,6 +97,7 @@ class App:
         self.preset = preset if preset is not None else self.library.get(key)
         self.universe = Universe(self.preset, self.screen, self.mouse)
         self.banner_until = time.time() + 2.5
+        self.switched_at = time.time()
         self.version += 1
         if key:
             self.library.remember(key)
@@ -101,9 +108,15 @@ class App:
             self.load(keys[n - 1])
 
     def cycle(self, step):
-        keys = self.library.keys()
+        keys = [k for k in self.library.keys() if k != presets.AUTOSAVE]
         i = keys.index(self.key) if self.key in keys else -1
         self.load(keys[(i + step) % len(keys)])
+
+    def set_rotate(self, minutes):
+        self.rotate = max(0.0, float(minutes))
+        self.switched_at = time.time()
+        self.library.set_state(rotate=self.rotate)
+        self.say(f"自动轮换：每 {self.rotate:g} 分钟" if self.rotate else "自动轮换：关闭")
 
     def say(self, text):
         self.message = text
@@ -120,6 +133,16 @@ class App:
             self.load(data["key"])
         elif kind == "slot":
             self.slot(int(data.get("slot", 0)))
+        elif kind == "next":
+            self.cycle(1)
+        elif kind == "prev":
+            self.cycle(-1)
+        elif kind == "rotate":
+            self.set_rotate(data.get("minutes", data.get("key", 0)) or 0)
+        elif kind == "autostart":
+            want = not desktop.autostart_enabled()
+            why = desktop.set_autostart(want, launch_args())
+            self.say(why or ("已设置登录时自动启动" if want else "已取消登录时自动启动"))
         elif kind == "new":
             self.load(None, presets.blank())
         elif kind == "restart":
@@ -208,7 +231,8 @@ class App:
                 "message": self.message,
                 "layer_template": layer_template(),
             })
-        self.controls.update(listing, self.key, self.paused, self.panel.url if self.panel else None)
+        self.controls.update(listing, self.key, self.paused, self.panel.url if self.panel else None,
+                             self.rotate, desktop.autostart_enabled())
 
     # ---------------------------------------------------------- window
     def on_event(self, e):
@@ -280,6 +304,8 @@ class App:
                 self.present()
                 self.publish()
                 self.autosave()
+                if self.rotate and not self.paused and time.time() - self.switched_at > self.rotate * 60:
+                    self.cycle(1)
                 self.clock.tick(self.fps)
         except KeyboardInterrupt:
             pass
@@ -291,19 +317,30 @@ class App:
             pygame.quit()
 
 
+def launch_args():
+    """How to start this wallpaper again (used for start-at-login)."""
+    return [sys.executable, os.path.abspath(__file__)]
+
+
 def main():
     ap = argparse.ArgumentParser(description="DesktopUniverse: a living particle wallpaper")
     ap.add_argument("preset", nargs="?", help="1-9 or a preset key (default: the last one you used)")
     ap.add_argument("--window", metavar="WxH", help="a normal window, e.g. 1280x720")
     ap.add_argument("--fullscreen", action="store_true", help="borderless full screen instead of wallpaper")
+    ap.add_argument("--rotate", type=float, metavar="MIN", help="switch to the next preset every MIN minutes (0 = off)")
     ap.add_argument("--fps", type=int, default=60, help="frame cap, 0 = uncapped (default 60)")
     ap.add_argument("--port", type=int, default=8765, help="panel port (default 8765)")
-    ap.add_argument("--no-panel", action="store_true", help="do not start the tuning panel")
+    ap.add_argument("--no-panel", action="store_true", help="do not start the tuning panel at all")
     ap.add_argument("--open-panel", action="store_true", help="open the panel in the browser at start")
     ap.add_argument("--global-mouse", action="store_true", help="follow the cursor outside the window")
+    ap.add_argument("--autostart", choices=["on", "off"], help="start the wallpaper when you log in (macOS)")
     ap.add_argument("--list", action="store_true", help="list presets and exit")
     args = ap.parse_args()
 
+    if args.autostart:
+        why = desktop.set_autostart(args.autostart == "on", launch_args())
+        print(why or f"start at login: {args.autostart}")
+        return
     lib = presets.Library()
     if args.list:
         for key, title, group, slot, _ in lib.listing():
@@ -318,7 +355,7 @@ def main():
     size = tuple(map(int, args.window.lower().split("x"))) if args.window else None
     App(key, args.fps, "fullscreen" if args.fullscreen else "wallpaper", size,
         None if args.no_panel else args.port, True if args.open_panel else None,
-        args.global_mouse).run()
+        args.global_mouse, args.rotate).run()
 
 
 if __name__ == "__main__":

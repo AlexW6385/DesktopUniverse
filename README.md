@@ -21,14 +21,18 @@ pip install -r requirements.txt
 python universe.py               # live wallpaper, on the preset you used last
 python universe.py 4             # start on preset 4
 python universe.py --window 1280x720
+python universe.py --rotate 15     # next preset every 15 minutes
+python universe.py --autostart on  # start the wallpaper at login (macOS LaunchAgent)
 python universe.py --list
 ```
 
-Control it from:
+Control it without leaving the wallpaper (the panel is only for editing and never opens by itself):
 
-- **the menu bar ✦**: the nine presets, your own presets, pause, clear, restart, the panel, quit
-- **hotkeys**: `⌃⌥1`–`⌃⌥9` presets, `⌃⌥P` pause, `⌃⌥C` clear, `⌃⌥R` restart.
-  macOS asks for Accessibility permission for the app that runs Python
+- **the menu bar ✦**: the nine presets and your own, next / previous, **自动轮换** (rotate every
+  5 / 15 / 30 / 60 minutes), pause, clear, restart, **登录时自动启动** (start at login, no
+  terminal needed), the panel, quit
+- **hotkeys**: `⌃⌥1`–`⌃⌥9` presets, `⌃⌥←` / `⌃⌥→` previous / next, `⌃⌥P` pause, `⌃⌥C` clear,
+  `⌃⌥R` restart. macOS asks for Accessibility permission for the app that runs Python
   (System Settings → Privacy & Security → Accessibility → your terminal)
 - **the panel** at <http://127.0.0.1:8765>: every parameter, live; keys `1`–`9`, `Space`, `C`, `R` work there too
 - in `--window` mode, the window itself: `1`–`9`, `←` `→`, `Space`, `C`, `R`, `F` info, `[` `]` frame cap, `Esc`

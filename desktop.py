@@ -8,13 +8,20 @@ web panel uses, so the main loop treats them all alike.
 
 from __future__ import annotations
 
+import os
+import plistlib
 import sys
+from pathlib import Path
 
 import pygame
 
 DIGITS = "123456789"
 # US layout key codes for 1-9, in case a layout reports other characters with Option held
 DIGIT_KEYCODES = {18: "1", 19: "2", 20: "3", 21: "4", 23: "5", 22: "6", 26: "7", 28: "8", 25: "9"}
+LEFT_ARROW, RIGHT_ARROW = 123, 124
+ROTATE_CHOICES = [(0, "关闭"), (5, "每 5 分钟"), (15, "每 15 分钟"), (30, "每 30 分钟"), (60, "每小时")]
+LAUNCH_AGENT = Path.home() / "Library" / "LaunchAgents" / "com.desktopuniverse.wallpaper.plist"
+
 
 
 def _appkit():
@@ -124,9 +131,10 @@ def _target_class():
 
 
 class MacControls:
-    """A ✦ in the menu bar (presets, pause, panel, quit) and ⌃⌥ hotkeys.
+    """A ✦ in the menu bar and ⌃⌥ hotkeys, so the wallpaper never needs a browser.
 
-    ⌃⌥1-9 switch preset, ⌃⌥P pause, ⌃⌥C clear, ⌃⌥R restart. Global hotkeys
+    ⌃⌥1-9 switch preset, ⌃⌥← / ⌃⌥→ previous / next, ⌃⌥P pause, ⌃⌥C clear,
+    ⌃⌥R restart. Global hotkeys
     need Accessibility permission for the app that runs Python (System
     Settings → Privacy & Security → Accessibility → your terminal)."""
 
@@ -159,8 +167,13 @@ class MacControls:
             try:
                 if event.modifierFlags() & need != need:
                     return
+                code = event.keyCode()
+                if code == RIGHT_ARROW:
+                    return self.post("next", {})
+                if code == LEFT_ARROW:
+                    return self.post("prev", {})
                 ch = (event.charactersIgnoringModifiers() or "").lower()
-                ch = DIGIT_KEYCODES.get(event.keyCode(), ch) if ch not in DIGITS else ch
+                ch = DIGIT_KEYCODES.get(code, ch) if ch not in DIGITS else ch
                 if ch in DIGITS:
                     self.post("slot", {"slot": int(ch)})
                 elif ch == "p":
@@ -187,11 +200,11 @@ class MacControls:
         except ImportError:
             pass
 
-    def update(self, listing, current, paused, panel_url):
+    def update(self, listing, current, paused, panel_url, rotate=0, autostart=False):
         """Rebuild the menu when something it shows has changed."""
         if not self.ok:
             return
-        sig = (tuple(map(tuple, listing)), current, paused, panel_url)
+        sig = (tuple(map(tuple, listing)), current, paused, panel_url, rotate, autostart)
         if sig == self._sig:
             return
         self._sig = sig
@@ -200,10 +213,11 @@ class MacControls:
         menu = AppKit.NSMenu.alloc().init()
         menu.setAutoenablesItems_(False)
 
-        def add(title, payload=None, key="", checked=False, enabled=True):
+        def add(title, payload=None, key="", checked=False, enabled=True, into=None):
+            target_menu = into or menu
             if payload is None and not title:
-                menu.addItem_(AppKit.NSMenuItem.separatorItem())
-                return
+                target_menu.addItem_(AppKit.NSMenuItem.separatorItem())
+                return None
             it = AppKit.NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(title, "act:", key)
             if key:
                 it.setKeyEquivalentModifierMask_(mods)
@@ -211,7 +225,8 @@ class MacControls:
             it.setRepresentedObject_(payload or "")
             it.setState_(1 if checked else 0)
             it.setEnabled_(enabled and payload is not None)
-            menu.addItem_(it)
+            target_menu.addItem_(it)
+            return it
 
         for key, title, group, slot, _ in listing:
             if slot:
@@ -222,11 +237,22 @@ class MacControls:
             for key, title, *_ in mine:
                 add(title, f"load:{key}", "", key == current)
         add("")
+        add("下一个", "next", "\uf703")                 # ⌃⌥→
+        add("上一个", "prev", "\uf702")                 # ⌃⌥←
+        rot = AppKit.NSMenu.alloc().init()
+        rot.setAutoenablesItems_(False)
+        for minutes, label in ROTATE_CHOICES:
+            add(label, f"rotate:{minutes}", "", float(rotate or 0) == minutes, into=rot)
+        holder = AppKit.NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("自动轮换", None, "")
+        holder.setSubmenu_(rot)
+        menu.addItem_(holder)
+        add("")
         add("继续" if paused else "暂停", "pause", "p")
         add("清屏", "clear", "c")
         add("重新开始", "restart", "r")
         add("")
-        add("打开调参面板…", "panel" if panel_url else None)
+        add("登录时自动启动", "autostart", "", autostart)
+        add("打开调参面板（编辑预设）…", "panel" if panel_url else None)
         add("退出 DesktopUniverse", "quit")
         self.item.setMenu_(menu)
 
@@ -238,3 +264,36 @@ class MacControls:
                 self.AppKit.NSStatusBar.systemStatusBar().removeStatusItem_(self.item)
             except Exception:
                 pass
+
+
+# ------------------------------------------------------------------ start at login
+
+def autostart_enabled() -> bool:
+    return sys.platform == "darwin" and LAUNCH_AGENT.exists()
+
+
+def set_autostart(on: bool, argv) -> str | None:
+    """Install or remove a LaunchAgent that starts the wallpaper at login (no
+    terminal window). Returns None on success, or why it could not."""
+    if sys.platform != "darwin":
+        return "start at login is only set up for macOS"
+    try:
+        if on:
+            LAUNCH_AGENT.parent.mkdir(parents=True, exist_ok=True)
+            log = Path.home() / "Library" / "Logs" / "DesktopUniverse.log"
+            with open(LAUNCH_AGENT, "wb") as f:
+                plistlib.dump({
+                    "Label": "com.desktopuniverse.wallpaper",
+                    "ProgramArguments": list(argv),
+                    "WorkingDirectory": os.path.dirname(os.path.abspath(argv[-1])),
+                    "RunAtLoad": True,
+                    "LimitLoadToSessionType": "Aqua",
+                    "ProcessType": "Interactive",
+                    "StandardOutPath": str(log),
+                    "StandardErrorPath": str(log),
+                }, f)
+        elif LAUNCH_AGENT.exists():
+            LAUNCH_AGENT.unlink()
+    except OSError as e:
+        return f"could not change start at login: {e}"
+    return None

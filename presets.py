@@ -301,20 +301,27 @@ class Library:
         self._write(AUTOSAVE, preset)
         self.autosaved = copy.deepcopy(preset)
 
-    # -- remember what was showing
-    def last(self):
+    # -- remember what was showing (and other app settings)
+    def state(self) -> dict:
         try:
-            key = json.loads(self._path(STATE).read_text(encoding="utf-8")).get("last")
-            return key if key in self else None
+            return json.loads(self._path(STATE).read_text(encoding="utf-8"))
         except (OSError, ValueError):
-            return None
+            return {}
 
-    def remember(self, key):
+    def set_state(self, **values):
         try:
             self.folder.mkdir(exist_ok=True)
-            self._path(STATE).write_text(json.dumps({"last": key}), encoding="utf-8")
+            st = {**self.state(), **values}
+            self._path(STATE).write_text(json.dumps(st), encoding="utf-8")
         except OSError:
             pass
+
+    def last(self):
+        key = self.state().get("last")
+        return key if key in self else None
+
+    def remember(self, key):
+        self.set_state(last=key)
 
 
 def get(key: str) -> Preset:
