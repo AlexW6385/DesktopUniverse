@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.idea/
+.vscode/
+.DS_Store
+# sprites the old scripts wrote to disk
+img_sand.png
+img_star.png
