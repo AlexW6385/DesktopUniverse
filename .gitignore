@@ -8,3 +8,5 @@ venv/
 # sprites the old scripts wrote to disk
 img_sand.png
 img_star.png
+presets_user/_autosave.json
+.pytest_cache/

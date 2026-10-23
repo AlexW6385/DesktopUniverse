@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DesktopUniverse 调参</title>
+<style>
+  :root {
+    --bg: #0d0f14; --card: #161a22; --line: #262c38; --text: #d9dee8;
+    --muted: #7d8696; --accent: #e8c27a; --warn: #f08a6c;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 13px/1.45 -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; }
+  header { position: sticky; top: 0; z-index: 5; background: rgba(13,15,20,.95);
+           backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); padding: 10px 14px; }
+  .top { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  h1 { font-size: 14px; margin: 0 8px 0 0; letter-spacing: .02em; }
+  h1 span { color: var(--accent); }
+  select, input, button { font: inherit; color: var(--text); background: #1d222c;
+                          border: 1px solid var(--line); border-radius: 6px; }
+  select, input[type=text], input[type=number] { padding: 3px 6px; }
+  button { padding: 4px 10px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.danger:hover { border-color: var(--warn); color: var(--warn); }
+  button.small { padding: 1px 7px; font-size: 12px; }
+  #status { margin-top: 6px; color: var(--muted); font-family: var(--mono); font-size: 12px; }
+  #status .warn, #status .off { color: var(--warn); }
+  #status .tree { color: var(--accent); }
+  main { padding: 12px 14px 60px; max-width: 780px; }
+  details { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+            margin-bottom: 10px; }
+  summary { cursor: pointer; padding: 9px 12px; font-weight: 600; list-style: none;
+            display: flex; align-items: center; gap: 8px; }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: "▸"; color: var(--muted); transition: transform .15s; }
+  details[open] > summary::before { transform: rotate(90deg); }
+  summary .tag { font-weight: 400; color: var(--muted); font-family: var(--mono); font-size: 12px; }
+  summary .spacer { flex: 1; }
+  .body { padding: 2px 12px 10px; }
+  .row { display: grid; grid-template-columns: 132px 1fr; gap: 10px; align-items: center;
+         padding: 3px 0; }
+  .row > label { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row > label code { font-family: var(--mono); font-size: 11px; color: #586070; margin-left: 4px; }
+  .num { display: grid; grid-template-columns: 1fr 92px; gap: 8px; align-items: center; }
+  .num input[type=number] { width: 92px; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  input[type=color] { width: 44px; height: 24px; padding: 0 2px; }
+  .inline { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .pull { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; margin: 8px 0;
+          background: #12161d; }
+  .pull.off { opacity: .5; }
+  .pullhead { display: flex; gap: 8px; align-items: center; margin-bottom: 4px; flex-wrap: wrap; }
+  .pullhead .spacer { flex: 1; }
+  .hint { color: var(--muted); font-size: 12px; margin: 2px 0 4px; }
+  .sub { color: var(--accent); font-size: 12px; margin: 10px 0 2px; font-weight: 600; }
+  .adders { display: flex; gap: 8px; flex-wrap: wrap; }
+  #savebox { display: none; gap: 6px; align-items: center; }
+  #savebox.show { display: inline-flex; }
+  #btnDelete { display: none; }
+  #btnDelete.show { display: inline-block; }
+  @media (max-width: 560px) { .row { grid-template-columns: 1fr; gap: 2px; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>Desktop<span>Universe</span></h1>
+    <select id="presetSel" title="切换预设"></select>
+    <button id="btnRestart" title="用当前参数重新开始">重开</button>
+    <button id="btnReset" title="丢掉改动，恢复这个预设保存时的样子">还原</button>
+    <button id="btnPause">暂停</button>
+    <button id="btnClear" title="清屏（拖尾模式有用）">清屏</button>
+    <button id="btnSave">另存为…</button>
+    <span id="savebox"><input id="saveName" type="text" placeholder="名字，如 my_galaxy" size="14">
+      <button id="saveOk">保存</button></span>
+    <button id="btnDelete" class="danger" title="删除这个保存的预设">删除</button>
+    <button id="btnQuit" class="danger">退出</button>
+  </div>
+  <div id="status">连接中…</div>
+</header>
+<main id="form"></main>
+
+<script>
+const HEAD = { "Content-Type": "application/json", "X-Desktop-Universe": "1" };
+const LAWS = {
+  classic: ["经典", "吸引力 g/rⁿ，指向源（n = 衰减指数，1 = 原版，2 = 牛顿）。内圈增益可以设成负数变成排斥"],
+  oop: ["OOP 版", "a = g/r²·(dx/r)·|dx|，只在 [最小, 最大) 距离内生效（OOPUniverse.py 的公式）"],
+  vortex: ["漩涡", "侧向力 g/rⁿ，让粒子绕着源转；正负决定方向。和经典吸引叠加就是星系"],
+  ring: ["轨道环", "像弹簧一样把粒子拉向半径为 radius 的圆。配合漩涡就是土星环"],
+};
+const SOURCES = [["above", "上一层"], ["mouse", "鼠标"], ["center", "屏幕中心"]];
+const SIZES = [["1x1", [1, 1]], ["2x1", [2, 1]], ["1x2", [1, 2]], ["2x2", [2, 2]], ["3x3", [3, 3]]];
+let S = null, P = null, version = -1, timer = null;
+
+const $ = (id) => document.getElementById(id);
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+async function post(path, body) {
+  try { await fetch(path, { method: "POST", headers: HEAD, body: JSON.stringify(body) }); }
+  catch (e) { /* the poll shows we are offline */ }
+}
+const cmd = (name, extra = {}) => post("/api/cmd", { cmd: name, ...extra });
+function changed(rerender = false) {
+  if (rerender) render();
+  clearTimeout(timer);
+  timer = setTimeout(() => post("/api/preset", P), 50);
+}
+const tidy = (v) => Number(Number(v).toPrecision(5));
+
+// ------------------------------------------------------------ controls
+function row(label, key, control) {
+  const r = el("div", "row");
+  const l = el("label", null, label);
+  if (key) { l.appendChild(el("code", null, key)); l.title = key; }
+  r.append(l, control);
+  return r;
+}
+
+function num(obj, key, o = {}) {
+  const wrap = el("div", "num");
+  const range = el("input"); range.type = "range";
+  const box = el("input"); box.type = "number"; box.step = o.step ?? "any";
+  const v0 = obj[key];
+  let lo = o.min ?? 0, hi = o.max ?? 100;
+  if (!o.log && typeof v0 === "number") {          // stretch the slider to fit odd values
+    if (v0 > hi) hi = v0 * 1.5;
+    if (v0 < lo) lo = v0 < 0 ? v0 * 1.5 : v0;
+    if (o.symmetric) { const m = Math.max(Math.abs(lo), Math.abs(hi)); lo = -m; hi = m; }
+  }
+  const llo = o.log ? Math.log10(o.min) : 0, lhi = o.log ? Math.log10(o.max) : 0;
+  const toS = (v) => o.log ? (v <= 0 ? 0 : Math.max(1, Math.min(1000, (Math.log10(v) - llo) / (lhi - llo) * 1000))) : v;
+  const fromS = (s) => o.log ? (s <= 0 ? 0 : Math.pow(10, llo + (lhi - llo) * s / 1000)) : s;
+  if (o.log) { range.min = 0; range.max = 1000; range.step = 1; }
+  else { range.min = lo; range.max = hi; range.step = o.step ?? (hi - lo) / 400; }
+  const show = () => {
+    const v = obj[key];
+    box.value = v === null || v === undefined ? "" : v;
+    range.value = v === null || v === undefined ? (o.log ? 1000 : hi) : toS(v);
+  };
+  show();
+  if (o.nullable) box.placeholder = "∞";
+  range.oninput = () => {
+    let v = fromS(+range.value);
+    v = o.int ? Math.round(v) : tidy(v);
+    obj[key] = v; box.value = v; changed(o.rerender);
+  };
+  box.onchange = () => {
+    if (box.value === "" && o.nullable) obj[key] = null;
+    else if (box.value !== "") obj[key] = o.int ? Math.round(+box.value) : +box.value;
+    show(); changed(o.rerender);
+  };
+  wrap.append(range, box);
+  return wrap;
+}
+
+function sel(obj, key, options, rerender = false) {
+  const s = el("select");
+  for (const opt of options) {
+    const [value, text] = Array.isArray(opt) ? opt : [opt, opt];
+    const o = el("option", null, text); o.value = value; s.appendChild(o);
+  }
+  s.value = obj[key];
+  s.onchange = () => { obj[key] = s.value; changed(rerender); };
+  return s;
+}
+
+function chk(obj, key, text = "", rerender = false) {
+  const lab = el("label", "inline");
+  const c = el("input"); c.type = "checkbox"; c.checked = !!obj[key];
+  c.onchange = () => { obj[key] = c.checked; changed(rerender); };
+  lab.append(c, document.createTextNode(text));
+  return lab;
+}
+
+function txt(obj, key) {
+  const t = el("input"); t.type = "text"; t.value = obj[key];
+  t.onchange = () => { obj[key] = t.value.trim() || obj[key]; changed(true); };
+  return t;
+}
+
+const hex = (rgb) => "#" + rgb.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
+const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+function colorPick(obj, key, fallback) {
+  const c = el("input"); c.type = "color";
+  c.value = hex(obj[key] || fallback);
+  c.oninput = () => { obj[key] = rgb(c.value); changed(); };
+  return c;
+}
+
+function button(text, fn, cls = "small") {
+  const b = el("button", cls, text);
+  b.onclick = (e) => { e.preventDefault(); e.stopPropagation(); fn(); };
+  return b;
+}
+
+function section(title, tag, open, build, extra, key) {
+  const d = el("details"); if (open) d.open = true;
+  const s = el("summary"); s.append(el("span", null, title));
+  if (tag) s.append(el("span", "tag", tag));
+  s.append(el("span", "spacer"));
+  if (extra) for (const b of extra) s.append(b);
+  const body = el("div", "body");
+  build(body);
+  d.append(s, body);
+  d.dataset.key = key || title;
+  return d;
+}
+
+// ------------------------------------------------------------ global settings
+function globalSection(b) {
+  b.append(row("名字", "title", txt(P, "title")));
+
+  b.append(el("div", "sub", "运动"));
+  b.append(row("摩擦", "friction", num(P, "friction", { log: true, min: 1e-6, max: 0.05 })));
+  b.append(row("摩擦形状", "friction_shape", sel(P, "friction_shape", [
+    ["axis", "按轴（原版，轨道略方）"], ["round", "按总速度（轨道是圆的）"]])));
+  b.append(row("重力 / 风 →", "wind[0]", num(P.wind, 0, { min: -0.3, max: 0.3, step: 0.005, symmetric: true })));
+  b.append(row("重力 / 风 ↓", "wind[1]", num(P.wind, 1, { min: -0.3, max: 0.3, step: 0.005, symmetric: true })));
+  b.append(row("墙壁", "edge", sel(P, "edge", [
+    ["wrap", "环绕（从对面出来）"], ["bounce", "反弹（墙壁不可穿越）"],
+    ["respawn", "出界重生"], ["legacy", "旧版 abs 规则"]], true)));
+  if (P.edge === "bounce") b.append(row("弹性", "bounce", num(P, "bounce", { min: 0, max: 1, step: 0.01 })));
+  b.append(row("按住鼠标反转", "click_invert", chk(P, "click_invert", " 按住左键时鼠标的力反向")));
+
+  b.append(el("div", "sub", "画面"));
+  b.append(row("拖尾", "trail", num(P, "trail", { min: 0, max: 1, step: 0.01 })));
+  b.append(el("div", "hint", "0 = 每帧清屏，1 = 永不清屏（原版拖尾），中间 = 渐隐"));
+  const darkMode = el("select");
+  for (const [v, t] of [["cycle", "循环（120 秒一明一暗）"], ["fixed", "固定"]]) {
+    const o = el("option", null, t); o.value = v; darkMode.appendChild(o);
+  }
+  darkMode.value = P.dark === "cycle" ? "cycle" : "fixed";
+  darkMode.onchange = () => { P.dark = darkMode.value === "cycle" ? "cycle" : 0.7; changed(true); };
+  b.append(row("明暗", "dark", darkMode));
+  if (P.dark !== "cycle") b.append(row("亮度", "dark", num(P, "dark", { min: 0, max: 1, step: 0.01 })));
+  b.append(row("明暗也影响摩擦", "dark_scales_friction", chk(P, "dark_scales_friction")));
+
+  b.append(el("div", "sub", "流场（全屏缓慢流动的风）"));
+  const F = P.flow;
+  b.append(row("开启", "flow.enabled", chk(F, "enabled", "", true)));
+  if (F.enabled) {
+    b.append(row("强度", "flow.strength", num(F, "strength", { min: 0, max: 0.5, step: 0.005 })));
+    b.append(row("漩涡大小 px", "flow.scale", num(F, "scale", { min: 40, max: 1500, step: 10 })));
+    b.append(row("变化速度", "flow.speed", num(F, "speed", { min: 0, max: 2, step: 0.01 })));
+  }
+
+  b.append(el("div", "sub", "漂移调色（颜色选“调色”的层用它）"));
+  const C = P.palette;
+  b.append(row("亮度偏移", "palette.offset", num(C, "offset", { min: 0, max: 150, int: true, step: 1 })));
+  b.append(row("每帧变化 最小", "palette.step_min", num(C, "step_min", { min: 0, max: 20, int: true, step: 1 })));
+  b.append(row("每帧变化 最大", "palette.step_max", num(C, "step_max", { min: 0, max: 20, int: true, step: 1 })));
+  b.append(row("通道下限", "palette.low", num(C, "low", { min: 0, max: 255, int: true, step: 1 })));
+  b.append(row("通道上限", "palette.high", num(C, "high", { min: 0, max: 255, int: true, step: 1 })));
+  b.append(row("初始 最小", "palette.init_min", num(C, "init_min", { min: 0, max: 255, int: true, step: 1 })));
+  b.append(row("初始 最大", "palette.init_max", num(C, "init_max", { min: 0, max: 255, int: true, step: 1 })));
+}
+
+// ------------------------------------------------------------ one layer
+function layerSection(L, i) {
+  const n = P.layers.length;
+  const tools = [
+    button("↑", () => { if (i > 0) { [P.layers[i - 1], P.layers[i]] = [P.layers[i], P.layers[i - 1]]; changed(true); } }),
+    button("↓", () => { if (i < n - 1) { [P.layers[i + 1], P.layers[i]] = [P.layers[i], P.layers[i + 1]]; changed(true); } }),
+    button("复制", () => {
+      const c = JSON.parse(JSON.stringify(L)); c.name = nextName(L.name.replace(/\d+$/, ""));
+      P.layers.splice(i + 1, 0, c); changed(true);
+    }),
+    button("删除", () => { P.layers.splice(i, 1); changed(true); }),
+  ];
+  const above = i === 0 ? "鼠标" : P.layers[i - 1].name;
+  const count = S && S.counts && S.counts[L.name] !== undefined ? S.counts[L.name] : L.count;
+  return section(`第 ${i + 1} 层 · ${L.name}`, `${count} 个 · 上一层 = ${above}`, true, (b) => {
+    const name = el("input"); name.type = "text"; name.value = L.name;
+    name.onchange = () => {
+      const nn = name.value.trim();
+      if (!nn || ["above", "mouse", "center"].includes(nn) || P.layers.some((x) => x !== L && x.name === nn)) {
+        name.value = L.name; return;
+      }
+      L.name = nn; changed(true);
+    };
+    b.append(row("名字", "name", name));
+    b.append(row("数量", "count", num(L, "count", { log: true, min: 1, max: 200000, int: true })));
+
+    b.append(el("div", "sub", "受力（只能来自上一层；鼠标和屏幕中心是全局的）"));
+    L.pulls.forEach((p, j) => b.append(pullBox(L, i, p, j)));
+    b.append(button("+ 添加一个力", () => {
+      L.pulls.push({ source: "above", enabled: true, field: { law: "classic", gravity: 20, min_dist: 5,
+        max_dist: null, inner_radius: 0, inner_gain: 1, outer_gain: 1, power: 1, radius: 150 } });
+      changed(true);
+    }, ""));
+
+    b.append(el("div", "sub", "运动"));
+    b.append(row("方式", "motion", sel(L, "motion", [
+      ["physics", "受力运动"], ["random_walk", "随机游走 + 受力"], ["teleport", "瞬移（雨滴）"], ["fixed", "固定不动"]], true)));
+    if (L.motion === "teleport")
+      b.append(row("每 N 帧瞬移一个", "teleport_every", num(L, "teleport_every", { min: 1, max: 120, int: true, step: 1 })));
+    const own = el("label", "inline");
+    const c = el("input"); c.type = "checkbox"; c.checked = L.friction !== null;
+    c.onchange = () => { L.friction = c.checked ? P.friction : null; changed(true); };
+    own.append(c, document.createTextNode(" 单独设置（否则用全局）"));
+    b.append(row("摩擦", "friction", own));
+    if (L.friction !== null) b.append(row("", null, num(L, "friction", { log: true, min: 1e-6, max: 0.05 })));
+    b.append(row("抖动（温度）", "jitter", num(L, "jitter", { min: 0, max: 1, step: 0.005 })));
+    b.append(row("速度上限", "max_speed", num(L, "max_speed", { min: 0, max: 30, step: 0.1 })));
+    b.append(el("div", "hint", "速度上限 0 = 不限制"));
+    if (P.wind[0] || P.wind[1]) b.append(row("受重力/风影响", "wind", num(L, "wind", { min: 0, max: 3, step: 0.05 })));
+    if (P.flow.enabled) b.append(row("受流场影响", "flow", num(L, "flow", { min: 0, max: 3, step: 0.05 })));
+
+    b.append(el("div", "sub", "外观"));
+    b.append(row("画法", "look", sel(L, "look", [["pixel", "像素点（沙）"], ["dot", "圆点（星）"], ["none", "不画"]], true)));
+    if (L.look === "pixel") {
+      const s = el("select");
+      for (const [t] of SIZES) { const o = el("option", null, t); o.value = t; s.appendChild(o); }
+      s.value = `${L.size[0]}x${L.size[1]}`;
+      s.onchange = () => { L.size = SIZES.find(([t]) => t === s.value)[1]; changed(); };
+      b.append(row("大小", "size", s));
+    }
+    if (L.look === "dot") b.append(row("直径", "dot", num(L, "dot", { min: 2, max: 40, int: true, step: 1 })));
+    if (L.look !== "none") {
+      b.append(row("颜色", "color_mode", sel(L, "color_mode", [
+        ["palette", "漂移调色"], ["fixed", "固定颜色"], ["speed", "按速度变色"]], true)));
+      const fallback = L.look === "dot" ? [253, 236, 166] : [220, 220, 220];
+      if (L.color_mode === "fixed") {
+        const box = el("div", "inline");
+        const orig = el("input"); orig.type = "checkbox"; orig.checked = L.color === null;
+        orig.onchange = () => { L.color = orig.checked ? null : fallback; changed(true); };
+        box.append(orig, document.createTextNode(L.look === "dot" ? " 原版星色 " : " 默认白 "));
+        if (L.color !== null) box.append(colorPick(L, "color", fallback));
+        b.append(row("", null, box));
+      }
+      if (L.color_mode === "speed") {
+        const box = el("div", "inline");
+        box.append(document.createTextNode("慢"), colorPick(L, "color", fallback),
+                   document.createTextNode("→ 快"), colorPick(L, "color2", [255, 120, 60]));
+        b.append(row("", null, box));
+        b.append(row("满色速度", "speed_ref", num(L, "speed_ref", { min: 0.5, max: 20, step: 0.1 })));
+      }
+    }
+
+    b.append(el("div", "sub", "出生（重开、加数量、出界重生时用）"));
+    b.append(row("位置", "spawn", sel(L, "spawn", [
+      ["random", "随机"], ["center", "屏幕中心"], ["mouse", "鼠标处"], ["edges", "四周边缘"]])));
+    b.append(row("初速度", "velocity", sel(L, "velocity", [
+      ["big_bang", "大爆炸"], ["jitter", "小幅随机 ±2"], ["drift", "漂移（旧星星）"], ["zero", "静止"]], true)));
+    if (L.velocity === "big_bang")
+      b.append(row("爆炸速度", "big_bang_speed_range", num(L, "big_bang_speed_range", { min: 0, max: 40, int: true, step: 1 })));
+  }, tools, "layer" + i);
+}
+
+function pullBox(L, i, p, j) {
+  const box = el("div", "pull" + (p.enabled ? "" : " off"));
+  const head = el("div", "pullhead");
+  const sources = SOURCES.map(([v, t]) => [v, v === "above" ? `上一层（${i === 0 ? "鼠标" : P.layers[i - 1].name}）` : t]);
+  head.append(chk(p, "enabled", "", true), document.createTextNode("来自"), sel(p, "source", sources, true),
+              document.createTextNode("公式"),
+              sel(p.field, "law", Object.entries(LAWS).map(([k, v]) => [k, v[0]]), true),
+              el("span", "spacer"),
+              button("删除", () => { L.pulls.splice(j, 1); changed(true); }));
+  box.append(head);
+  const f = p.field;
+  box.append(el("div", "hint", LAWS[f.law][1]));
+  if (p.source === "above" && i > 0 && P.layers[i - 1].count * L.count > 600000)
+    box.append(el("div", "hint", `⚠ 上一层 ${P.layers[i - 1].count} 个 × 本层 ${L.count} 个太多，这个力会被跳过；上层要少`));
+  const gmax = f.law === "ring" ? 5 : 200;
+  box.append(row("强度 g", "gravity", num(f, "gravity", { min: -gmax, max: gmax, symmetric: true })));
+  if (f.law === "classic" || f.law === "vortex")
+    box.append(row("衰减指数 n", "power", num(f, "power", { min: -1, max: 3, step: 0.05 })));
+  if (f.law === "ring") box.append(row("半径 px", "radius", num(f, "radius", { min: 0, max: 800, step: 1 })));
+  box.append(row("最小距离", "min_dist", num(f, "min_dist", { min: 0, max: 500, step: 1 })));
+  box.append(row("最大距离", "max_dist", num(f, "max_dist", { min: 0, max: 3000, step: 1, nullable: true })));
+  if (f.law === "classic" || f.law === "vortex") {
+    box.append(row("内圈半径", "inner_radius", num(f, "inner_radius", { min: 0, max: 1000, step: 1 })));
+    box.append(row("内圈增益", "inner_gain", num(f, "inner_gain", { min: -3, max: 3, step: 0.05 })));
+    box.append(row("外圈增益", "outer_gain", num(f, "outer_gain", { min: -3, max: 3, step: 0.05 })));
+  }
+  return box;
+}
+
+function nextName(base) {
+  base = base || "layer";
+  let k = 1;
+  while (P.layers.some((x) => x.name === `${base}${k}`)) k++;
+  return `${base}${k}`;
+}
+
+function newLayer(kind) {
+  const star = kind === "star";
+  const L = {
+    name: nextName(kind), count: star ? 3 : 20000, motion: "physics", friction: null, jitter: 0,
+    max_speed: 0, flow: 1, wind: 1, teleport_every: 1,
+    spawn: "random", velocity: star ? "drift" : "big_bang", big_bang_speed_range: 10,
+    look: star ? "dot" : "pixel", size: [1, 1], dot: 8,
+    color_mode: star ? "fixed" : "palette", color: null, color2: [255, 120, 60], speed_ref: 6,
+    pulls: [{ source: "above", enabled: true, field: { law: "classic", gravity: star ? 30 : 12,
+      min_dist: star ? 10 : 3, max_dist: null, inner_radius: 0, inner_gain: 1, outer_gain: 1,
+      power: 1, radius: 150 } }],
+  };
+  // a new star goes just above the bottom sand layer, new sand goes to the bottom
+  const last = P.layers[P.layers.length - 1];
+  if (star && last && last.look === "pixel") P.layers.splice(P.layers.length - 1, 0, L);
+  else P.layers.push(L);
+  // sand under a big layer can't feel every grain above it: start it on the mouse instead
+  const k = P.layers.indexOf(L);
+  if (k > 0 && P.layers[k - 1].count * L.count > 600000) L.pulls[0].source = "mouse";
+  changed(true);
+}
+
+// ------------------------------------------------------------ page
+function render() {
+  if (!P) return;
+  const open = {};
+  for (const d of document.querySelectorAll("#form details")) open[d.dataset.key] = d.open;
+  const scroll = window.scrollY;
+  const form = $("form");
+  form.replaceChildren();
+  form.append(section("全局", P.title, false, globalSection, null, "global"));
+  P.layers.forEach((L, i) => form.append(layerSection(L, i)));
+  const adders = el("div", "adders");
+  adders.append(button("+ 星层（圆点，少量）", () => newLayer("star"), ""),
+                button("+ 沙层（像素，大量）", () => newLayer("sand"), ""));
+  form.append(adders);
+  for (const d of form.querySelectorAll("details"))
+    if (open[d.dataset.key] !== undefined) d.open = open[d.dataset.key];
+  window.scrollTo(0, scroll);
+}
+
+function status(online) {
+  const st = $("status");
+  if (!online) { st.innerHTML = '<span class="off">● 未连接：程序没在运行？</span>'; return; }
+  const counts = Object.entries(S.counts).map(([k, v]) => `${k} ${v}`).join(" · ");
+  st.replaceChildren(document.createTextNode(
+    `● ${S.fps.toFixed(0)} fps   ${counts}   ${S.mode}${S.paused ? "   已暂停" : ""}`));
+  if (P) {
+    const parts = ["鼠标"];
+    P.layers.forEach((L) => {
+      const on = L.pulls.filter((p) => p.enabled);
+      const extra = [...new Set(on.filter((p) => p.source !== "above").map((p) => p.source === "mouse" ? "+鼠标" : "+中心"))];
+      parts.push(L.name + (extra.length ? `(${extra.join("")})` : ""));
+    });
+    st.append(el("br"), el("span", "tree", "层级  " + parts.join(" → ")));
+  }
+  for (const w of S.problems) st.append(el("br"), el("span", "warn", "⚠ " + w));
+  $("btnPause").textContent = S.paused ? "继续" : "暂停";
+  const cur = S.presets.find((x) => x[0] === S.current);
+  $("btnDelete").classList.toggle("show", !!(cur && cur[3]));
+}
+
+function fillPresets() {
+  const s = $("presetSel");
+  const sig = JSON.stringify(S.presets) + S.current;
+  if (s.dataset.sig === sig) return;
+  s.replaceChildren();
+  const groups = {};
+  S.presets.forEach(([key, title, group], i) => {
+    if (!groups[group]) { groups[group] = el("optgroup"); groups[group].label = group; s.appendChild(groups[group]); }
+    const o = el("option", null, `${i + 1}. ${title}`); o.value = key; groups[group].appendChild(o);
+  });
+  s.value = S.current; s.dataset.sig = sig;
+}
+
+async function poll() {
+  try {
+    const r = await fetch("/api/state", { cache: "no-store" });
+    S = await r.json();
+    if (!S.preset) throw new Error("starting");
+    fillPresets();
+    if (S.version !== version) { version = S.version; P = S.preset; render(); }
+    status(true);
+  } catch (e) { status(false); }
+  setTimeout(poll, 600);
+}
+
+function twoClick(btn, label, fn) {
+  let armed = 0;
+  btn.onclick = () => {
+    if (Date.now() - armed < 3000) { fn(); btn.textContent = label; armed = 0; return; }
+    armed = Date.now(); btn.textContent = "再点一次" + label;
+    setTimeout(() => { btn.textContent = label; }, 3000);
+  };
+}
+
+$("presetSel").onchange = (e) => cmd("load", { key: e.target.value });
+$("btnRestart").onclick = () => cmd("restart");
+$("btnReset").onclick = () => cmd("reset");
+$("btnPause").onclick = () => cmd("pause");
+$("btnClear").onclick = () => cmd("clear");
+$("btnSave").onclick = () => { $("savebox").classList.toggle("show"); $("saveName").focus(); };
+$("saveOk").onclick = () => {
+  const name = $("saveName").value.trim();
+  if (name) { cmd("save", { name, preset: P }); $("savebox").classList.remove("show"); $("saveName").value = ""; }
+};
+$("saveName").onkeydown = (e) => { if (e.key === "Enter") $("saveOk").click(); };
+twoClick($("btnDelete"), "删除", () => cmd("delete", { key: S.current }));
+twoClick($("btnQuit"), "退出", () => cmd("quit"));
+poll();
+</script>
+</body>
+</html>
