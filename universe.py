@@ -67,7 +67,12 @@ class App:
 
         self.inbox: queue.Queue = queue.Queue()
         self.library = presets.Library()
-        self.rotate = float(rotate if rotate is not None else self.library.state().get("rotate", 0))
+        st = self.library.state()
+        self.rotate = float(rotate if rotate is not None else st.get("rotate", 0))
+        self.rotate_random = bool(st.get("rotate_random", False))
+        self.pause_hidden = bool(st.get("pause_hidden", True))
+        self.hidden = False
+        self.last_visibility_check = 0.0
         self.switched_at = time.time()
         start = key or self.library.last() or presets.DEFAULT
         self.load(start if start in self.library else presets.DEFAULT)
@@ -117,6 +122,28 @@ class App:
         self.library.set_state(rotate=self.rotate)
         self.say(f"自动轮换：每 {self.rotate:g} 分钟" if self.rotate else "自动轮换：关闭")
 
+    def random_other(self):
+        """A random preset that is not the current one (built-ins and yours)."""
+        import random
+        keys = [k for k in self.library.keys() if k != presets.AUTOSAVE and k != self.key]
+        if keys:
+            self.load(random.choice(keys))
+
+    def check_visibility(self):
+        """Pause the simulation while the wallpaper is covered by windows or off-Space."""
+        now = time.time()
+        if now - self.last_visibility_check < 0.5:
+            return
+        self.last_visibility_check = now
+        visible = desktop.wallpaper_visible() if (self.pause_hidden and self.mode == "wallpaper") else None
+        hidden = visible is False
+        if hidden and not self.hidden:
+            self.hidden_since = now
+        elif not hidden and self.hidden:
+            # don't count the time spent hidden toward rotation
+            self.switched_at += now - self.hidden_since
+        self.hidden = hidden
+
     def say(self, text):
         self.message = text
         print(text)
@@ -138,6 +165,16 @@ class App:
             self.cycle(-1)
         elif kind == "rotate":
             self.set_rotate(data.get("minutes", data.get("key", 0)) or 0)
+        elif kind == "rotate_random":
+            self.rotate_random = not self.rotate_random
+            self.library.set_state(rotate_random=self.rotate_random)
+            self.say("自动轮换：随机顺序" if self.rotate_random else "自动轮换：按列表顺序")
+        elif kind == "pause_hidden":
+            self.pause_hidden = not self.pause_hidden
+            self.library.set_state(pause_hidden=self.pause_hidden)
+            self.say("被窗口盖住时暂停：开" if self.pause_hidden else "被窗口盖住时暂停：关")
+        elif kind == "random":
+            self.random_other()
         elif kind == "autostart":
             want = not desktop.autostart_enabled()
             why = desktop.set_autostart(want, launch_args())
@@ -224,6 +261,7 @@ class App:
                 "fps": self.clock.get_fps(),
                 "counts": self.universe.counts(),
                 "paused": self.paused,
+                "hidden": self.hidden,
                 "mode": self.mode,
                 "hotkeys": self.controls.hotkeys,
                 "problems": problems(self.preset),
@@ -231,7 +269,8 @@ class App:
                 "layer_template": layer_template(),
             })
         self.controls.update(listing, self.key, self.paused, self.panel.url if self.panel else None,
-                             self.rotate, desktop.autostart_enabled())
+                             self.rotate, desktop.autostart_enabled(), self.rotate_random,
+                             self.pause_hidden, self.hidden)
 
     # ---------------------------------------------------------- window
     def on_event(self, e):
@@ -297,6 +336,11 @@ class App:
                 for e in pygame.event.get():
                     self.on_event(e)
                 self.drain()
+                self.check_visibility()
+                if self.hidden:                       # covered: sleep, keep the menu responsive
+                    self.publish()
+                    self.clock.tick(4)
+                    continue
                 if not self.paused:
                     self.universe.step()
                     self.universe.draw()
@@ -304,7 +348,7 @@ class App:
                 self.publish()
                 self.autosave()
                 if self.rotate and not self.paused and time.time() - self.switched_at > self.rotate * 60:
-                    self.cycle(1)
+                    self.random_other() if self.rotate_random else self.cycle(1)
                 self.clock.tick(self.fps)
         except KeyboardInterrupt:
             pass

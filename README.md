@@ -6,7 +6,7 @@ that can be stacked into layers and tuned live from a browser panel.
 
 ![all presets](docs/all.jpg)
 
-37 built-in universes in four groups (宇宙 · 自然 · 几何 · 流体与互动), picked from the
+32 built-in universes in four groups (宇宙 · 自然 · 几何 · 互动), picked from the
 menu bar; the first nine also sit on hotkeys 1–9. Every one is a few hundred
 bytes of parameters over the same engine, and the panel lets you make your own.
 
@@ -26,9 +26,10 @@ python universe.py --list
 
 Control it without leaving the wallpaper (the panel is only for editing and never opens by itself):
 
-- **the menu bar ✦**: the nine presets and your own, next / previous, **自动轮换** (rotate every
-  5 / 15 / 30 / 60 minutes), pause, clear, restart, **登录时自动启动** (start at login, no
-  terminal needed), the panel, quit
+- **the menu bar ✦**: every preset by group plus your own, next / previous, **自动轮换**
+  (rotate every 5 / 15 / 30 / 60 minutes, in order or **随机顺序**), pause, **被窗口盖住时暂停**
+  (the simulation sleeps while windows cover the desktop or you are on another Space, so it costs
+  nothing while you work), clear, restart, **登录时自动启动** (start at login), the panel, quit
 - **hotkeys**: `⌃⌥1`–`⌃⌥9` presets, `⌃⌥←` / `⌃⌥→` previous / next, `⌃⌥P` pause, `⌃⌥C` clear,
   `⌃⌥R` restart. macOS asks for Accessibility permission for the app that runs Python
   (System Settings → Privacy & Security → Accessibility → your terminal)
@@ -75,10 +76,10 @@ the schema at the bottom of that file.
 
 | Group | Presets |
 | --- | --- |
-| 宇宙 | 双星系 ¹ · 奇异吸引子 ² · 星轨 ⁴ · 黑洞 · 彗星 · 超新星 · 土星环 · 星云 · 掌中宇宙 · 潮汐 |
-| 自然 | 鸟群 ⁵ · 雪景球 ⁸ · 烟花 ⁹ · 鱼群 · 萤火虫 · 雨 · 蒲公英 · 篝火 · 沙漏 · 水面 · 鬼火 · 蜂群 · 流星雨 |
+| 宇宙 | 双星系 ¹ · 奇异吸引子 ² · 星轨 ⁴ · 黑洞 · 彗星 · 超新星 · 土星环 · 掌中宇宙 |
+| 自然 | 鸟群 ⁵ · 雪景球 ⁸ · 烟花 ⁹ · 鱼群 · 萤火虫 · 蒲公英 · 篝火 · 沙漏 · 鬼火 |
 | 几何 | 曼陀罗 ³ · 利萨如 · 谐振子 · 万花筒 · 漩涡 · 原子 · 光环 · 心跳 |
-| 流体与互动 | 弹性布 ⁶ · 墨流 ⁷ · 香烟 · 熔岩灯 · 磁铁 · 涟漪 |
+| 互动 | 弹性布 ⁶ · 墨流 ⁷ · 香烟 · 涟漪 · 星尘笔 · 精灵 · 弹珠 |
 
 Superscripts are the hotkey slots. Each preset's description (what it is
 made of, and what the mouse does to it) shows in the panel. The built-ins are

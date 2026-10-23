@@ -102,6 +102,21 @@ def make_wallpaper() -> str | None:
     return None
 
 
+def wallpaper_visible() -> bool | None:
+    """True / False when macOS can tell whether any part of the wallpaper window is
+    on screen (not covered by other windows, not on another Space); None elsewhere."""
+    AppKit = _appkit()
+    if AppKit is None:
+        return None
+    try:
+        wins = AppKit.NSApplication.sharedApplication().windows()
+        if not wins:
+            return None
+        return bool(wins[0].occlusionState() & AppKit.NSWindowOcclusionStateVisible)
+    except Exception:
+        return None
+
+
 # ------------------------------------------------------------------ menu bar + hotkeys
 
 _TARGET_CLASS = None
@@ -200,11 +215,13 @@ class MacControls:
         except ImportError:
             pass
 
-    def update(self, listing, current, paused, panel_url, rotate=0, autostart=False):
+    def update(self, listing, current, paused, panel_url, rotate=0, autostart=False,
+               rotate_random=False, pause_hidden=True, hidden=False):
         """Rebuild the menu when something it shows has changed."""
         if not self.ok:
             return
-        sig = (tuple(map(tuple, listing)), current, paused, panel_url, rotate, autostart)
+        sig = (tuple(map(tuple, listing)), current, paused, panel_url, rotate, autostart,
+               rotate_random, pause_hidden, hidden)
         if sig == self._sig:
             return
         self._sig = sig
@@ -255,11 +272,14 @@ class MacControls:
         rot.setAutoenablesItems_(False)
         for minutes, label in ROTATE_CHOICES:
             add(label, f"rotate:{minutes}", "", float(rotate or 0) == minutes, into=rot)
+        add("", into=rot)
+        add("随机顺序", "rotate_random", "", rotate_random, into=rot)
         holder = AppKit.NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("自动轮换", None, "")
         holder.setSubmenu_(rot)
         menu.addItem_(holder)
         add("")
         add("继续" if paused else "暂停", "pause", "p")
+        add("被窗口盖住时暂停" + ("（现在已暂停）" if hidden else ""), "pause_hidden", "", pause_hidden)
         add("清屏", "clear", "c")
         add("重新开始", "restart", "r")
         add("")

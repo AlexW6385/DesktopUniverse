@@ -244,18 +244,6 @@ def saturn():
     )
 
 
-def nebula():
-    return Preset(
-        "星云", "没有引力：一片缓慢翻滚的气体，每个粒子还带着热运动的抖动，所以云是毛茸茸的；"
-        "颜色是彩虹散布的一小段，叠加发光让重叠处亮起来",
-        layers=[Layer("gas", 36000, [Pull(MOUSE, push(200, 130)), Pull(MOUSE, sweep(10, 240))],
-                      jitter=0.05, velocity="zero", color_mode="rainbow", brightness=1.3)],
-        friction=0.03, trail=0.93, blend="add", glow=0.25,
-        flow=Flow(True, 0.05, 520, 0.04, mode="carry"),
-        palette=Palette(hue=250, hue_speed=1.5, saturation=0.7, value=0.9, spread=120),
-    )
-
-
 def pocket_universe():
     return Preset(
         "掌中宇宙", "一个 de Jong 奇异吸引子跟着你的鼠标走：分形随着光标在桌面上游荡，形状还在慢慢变化",
@@ -294,17 +282,6 @@ def fireflies():
                       fade=True, max_speed=1.2, friction=0.05, look="dot", dot=4,
                       color_mode="fixed", color=[255, 230, 120], brightness=1.3)],
         trail=0.4, blend="add", glow=0.8, background=[6, 14, 8], click_invert=False,
-    )
-
-
-def rain():
-    return Preset(
-        "雨", "一场斜雨落在桌面上，雨丝越快越亮；出界的雨滴在空中重生；鼠标是一把伞",
-        layers=[Layer("drop", 12000, [Pull(MOUSE, push(260, 90))], velocity="zero", wind=1.0,
-                      variety=0.6, max_speed=14, color_mode="speed", color=[60, 80, 120], color2=[200, 220, 255],
-                      speed_ref=12, brightness=1.6)],
-        friction=0.0005, wind=[0.04, 0.22], edge="respawn", trail=0.85, blend="add", glow=0.8,
-        background=[6, 8, 14],
     )
 
 
@@ -349,16 +326,6 @@ def hourglass():
     )
 
 
-def water():
-    return Preset(
-        "水面", "一张被弹簧固定的点阵，一阵阵缓慢的大浪推着它起伏，鼠标划过会掀起水花；越动越亮",
-        layers=[Layer("surface", 18000, [Pull(MOUSE, push(260, 120)), Pull(MOUSE, sweep(22, 220))],
-                      spawn="grid", velocity="zero", home=0.012, friction=0.03, flow=1.0, size=2,
-                      color_mode="speed", color=[70, 125, 190], color2=[220, 245, 255], speed_ref=0.9)],
-        flow=Flow(True, 0.3, 900, 0.25), background=[3, 10, 20],
-    )
-
-
 def will_o_wisp():
     return Preset(
         "鬼火", "几团幽绿的鬼火在黑暗里游荡，身后拖着一缕缕慢慢消散的烟；鼠标靠近，它们会躲开",
@@ -373,19 +340,6 @@ def will_o_wisp():
         click_invert=False,
     )
 
-
-def bees():
-    return Preset(
-        "蜂群", "一群蜜蜂围着你的鼠标嗡嗡打转：互相跟随、不肯撞到一起、永远停不下来；按住鼠标它们会炸开",
-        layers=[Layer("bee", 6000, [Pull(MOUSE, Field("classic", 90, power=1, min_dist=70, max_dist=900))],
-                      align=0.06, pressure=0.8, cell=20, jitter=0.35, min_speed=3, max_speed=6, variety=0.6,
-                      velocity="random", start_speed=3, look="dot", dot=3,
-                      color_mode="speed", color=[255, 200, 40], color2=[70, 60, 40], speed_ref=5)],
-        friction=0.0005, edge="bounce", bounce=0.5, background=[28, 34, 40],
-    )
-
-
-# ------------------------------------------------------------------ geometry
 
 def lissajous():
     return Preset(
@@ -507,75 +461,63 @@ def incense():
     )
 
 
-def lava_lamp():
-    return Preset(
-        "熔岩灯", "六团蜡各自跟着一个看不见的核心慢慢上下漂浮；两个核心靠近时，蜡团就融成一团，再分开；"
-        "鼠标能把蜡团搅散",
-        layers=[
-            Layer("core", 6, motion="path", path_size=[0.7, 0.75], path_freq=[2, 3], path_speed=0.004,
-                  path_spread=1.0, look="none"),
-            Layer("wax", 5000, [
-                Pull(ABOVE, Field("classic", 30, min_dist=4, max_dist=220, inner_radius=55, inner_gain=-0.15)),
-                Pull(MOUSE, push(200, 110)),
-            ], spawn="above", velocity="random", start_speed=1, jitter=0.45, friction=0.03, look="dot", dot=7,
-                color_mode="fixed", color=[255, 110, 60], brightness=0.45),
-        ],
-        trail=0.35, blend="add", glow=0.3, background=[22, 6, 12],
-    )
-
-
-def magnet():
-    return Preset(
-        "磁铁", "四万颗铁屑静静躺着，你的鼠标是一块磁铁：靠近就被吸来，围着它转，按住左键又全部弹开",
-        layers=[Layer("filings", 40000, [
-            Pull(ABOVE, Field("classic", 2500, power=2, min_dist=50)),
-            Pull(ABOVE, Field("vortex", 12, min_dist=50)),
-        ], variety=0.5, jitter=0.03, velocity="zero", color_mode="speed", color=[90, 90, 100],
-            color2=[255, 240, 200], speed_ref=8, brightness=1.8)],
-        friction=0.002, trail=0.5, blend="add", glow=0.45,
-    )
-
-
-def meteor_shower():
-    return Preset(
-        "流星雨", "流星从右上角斜斜划过夜空，越快越亮，烧尽后在别处重新亮起；鼠标是一片挡住它们的云",
-        layers=[Layer("meteor", 1500, [Pull(MOUSE, push(260, 120))], velocity="zero", variety=0.8,
-                      max_speed=22, life=240, life_jitter=0.8, fade=True, wind=1.0, size=2,
-                      color_mode="speed", color=[60, 60, 120], color2=[255, 255, 240], speed_ref=14, brightness=2.0)],
-        friction=0.0, wind=[-0.12, 0.12], edge="respawn", trail=0.9, blend="add", glow=0.9,
-        background=[2, 3, 10],
-    )
-
-
 def ripples():
     return Preset(
-        "涟漪", "一张平静的水面，三滴雨随机落下，每一滴都荡开一圈涟漪，然后水面慢慢恢复平静；鼠标也是一滴雨",
+        "涟漪", "一张平静的水面，雨滴随机落下，每一滴都荡开一圈涟漪，然后水面慢慢恢复平静；"
+        "鼠标划过水面会拖出一道波浪",
         layers=[
-            Layer("drop", 3, motion="teleport", teleport_every=50, look="none"),
-            Layer("water", 18000, [Pull(ABOVE, Field("classic", 900, min_dist=2, inner_radius=70, inner_gain=-1,
-                                                     outer_gain=0)),
-                                   Pull(MOUSE, push(120, 60))],
-                  spawn="grid", velocity="zero", home=0.02, friction=0.03, size=2,
-                  color_mode="speed", color=[50, 90, 140], color2=[200, 235, 255], speed_ref=2, brightness=1.6),
+            Layer("drop", 3, motion="teleport", teleport_every=45, look="none"),
+            Layer("water", 18000, [
+                Pull(ABOVE, Field("classic", 4000, min_dist=2, inner_radius=120, inner_gain=-1, outer_gain=0)),
+                Pull(MOUSE, sweep(40, 160)),
+            ], spawn="grid", velocity="zero", home=0.02, friction=0.03, size=2,
+                color_mode="speed", color=[40, 80, 130], color2=[220, 245, 255], speed_ref=2.5, brightness=1.6),
         ],
-        background=[3, 8, 18],
+        background=[3, 8, 18], click_invert=False,
     )
 
 
-def tide():
+def stardust_pen():
     return Preset(
-        "潮汐", "一个双星系，但光和引力每 40 秒会一起熄灭一次：黑暗里星尘自由飘散，"
-        "光重新亮起时又被重新聚拢成旋臂",
+        "星尘笔", "鼠标是一支笔：你划过的地方留下一道发光的星尘，星尘带着笔的速度飞出去，"
+        "被缓慢的旋涡慢慢卷散、淡去；停下不动，它只会在笔尖积成一小团",
+        layers=[Layer("dust", 20000, [], spawn="mouse", velocity="inherit", start_speed=0.8, life=420,
+                      life_jitter=0.5, friction=0.01, jitter=0.02, flow=1.0,
+                      color_mode="rainbow", brightness=1.2)],
+        trail=0.7, blend="add", glow=0.4, click_invert=False,
+        flow=Flow(True, 0.05, 360, 0.1, mode="carry"),
+        palette=Palette(hue=200, hue_speed=12, saturation=0.7, value=1.0, spread=60),
+    )
+
+
+def sprites():
+    return Preset(
+        "精灵", "三只小精灵追着你的鼠标跑，跑得快就甩在后面，追上了就围着光标打转；"
+        "每只身后都拖着一条会褪色的光尾",
         layers=[
-            Layer("core", 2, motion="path", path_size=[0.3, 0.22], path_freq=[1, 1], path_speed=0.012,
-                  path_spread=0.5, look="none"),
-            Layer("stars", 28000, [
-                Pull(ABOVE, Field("classic", 22, min_dist=10)),
-                Pull(ABOVE, Field("vortex", 6, min_dist=10)),
-            ], velocity="orbit", start_speed=4, jitter=0.05, variety=0.9, color_mode="rainbow"),
+            Layer("sprite", 3, [
+                Pull(ABOVE, Field("classic", 20, power=0.5, min_dist=30)),
+                Pull(ABOVE, Field("vortex", 14, min_dist=30, max_dist=160)),
+                Pull(ABOVE, Field("drag", 2, max_dist=400)),
+            ], spawn="mouse", velocity="orbit", start_speed=3, friction=0.0015, variety=0.4,
+                look="dot", dot=7, color_mode="fixed", color=[255, 250, 230]),
+            Layer("trail", 9000, [], spawn="above", velocity="inherit", start_speed=0.3, life=150,
+                  life_jitter=0.3, friction=0.03, color_mode="age", color=[255, 220, 150], color2=[120, 60, 200],
+                  brightness=1.3),
         ],
-        friction=0.0004, trail=0.6, blend="add", glow=0.4, breathe_period=40, breathe_depth=0.95,
-        breathe_forces=True, palette=Palette(hue=200, hue_speed=2, saturation=0.6, value=0.9, spread=80),
+        trail=0.4, blend="add", glow=0.6, click_invert=False,
+    )
+
+
+def marbles():
+    return Preset(
+        "弹珠", "三百颗弹珠在桌面上永不停歇地弹来弹去，撞到边缘就反弹；鼠标是一根球杆，划过去就把它们打飞；"
+        "快的发白，慢的发暗",
+        layers=[Layer("marble", 300, [Pull(MOUSE, push(400, 90)), Pull(MOUSE, sweep(60, 120))],
+                      velocity="random", start_speed=3, min_speed=1.2, max_speed=14, look="dot", dot=9,
+                      color_mode="speed", color=[70, 90, 140], color2=[255, 255, 255], speed_ref=9)],
+        friction=0.0003, edge="bounce", bounce=1.0, trail=0.5, blend="add", glow=0.5,
+        background=[8, 10, 16], click_invert=False,
     )
 
 
@@ -583,22 +525,21 @@ GROUPS = [
     ("宇宙", [
         ("galaxy", galaxy), ("attractor", strange_attractor), ("orrery", orrery),
         ("black_hole", black_hole), ("comets", comets), ("supernova", supernova),
-        ("saturn", saturn), ("nebula", nebula), ("pocket_universe", pocket_universe), ("tide", tide),
+        ("saturn", saturn), ("pocket_universe", pocket_universe),
     ]),
     ("自然", [
         ("murmuration", murmuration), ("snow_globe", snow_globe), ("fireworks", fireworks),
-        ("fish", fish), ("fireflies", fireflies), ("rain", rain), ("dandelion", dandelion),
-        ("campfire", campfire), ("hourglass", hourglass), ("water", water),
-        ("will_o_wisp", will_o_wisp), ("bees", bees), ("meteor_shower", meteor_shower),
+        ("fish", fish), ("fireflies", fireflies), ("dandelion", dandelion),
+        ("campfire", campfire), ("hourglass", hourglass), ("will_o_wisp", will_o_wisp),
     ]),
     ("几何", [
         ("mandala", mandala), ("lissajous", lissajous), ("harmonics", harmonics),
         ("kaleidoscope", kaleidoscope), ("whirlpool", whirlpool), ("atom", atom),
         ("halo", halo), ("heartbeat", heartbeat),
     ]),
-    ("流体与互动", [
-        ("fabric", fabric), ("ink", ink), ("incense", incense), ("lava_lamp", lava_lamp),
-        ("magnet", magnet), ("ripples", ripples),
+    ("互动", [
+        ("fabric", fabric), ("ink", ink), ("incense", incense), ("ripples", ripples),
+        ("stardust_pen", stardust_pen), ("sprites", sprites), ("marbles", marbles),
     ]),
 ]
 
