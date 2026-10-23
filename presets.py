@@ -14,7 +14,7 @@ import json
 import re
 from pathlib import Path
 
-from config import ABOVE, CENTER, MOUSE, Attractor, Field, Flow, Layer, Palette, Preset, Pull, from_dict, to_dict
+from config import ABOVE, CENTER, MOUSE, Attractor, Field, Flow, Flow3D, Layer, Palette, Preset, Pull, from_dict, to_dict
 
 USER_DIR = Path(__file__).with_name("presets_user")
 AUTOSAVE = "_autosave"
@@ -164,14 +164,16 @@ def snow_globe():
 
 def fireworks():
     return Preset(
-        "烟花", "三个看不见的引信每隔一阵瞬移一次；火花寿命一致，所以同时死去、同时在新位置炸开",
+        "烟花", "三个看不见的引信每隔一阵瞬移一次；火花寿命一致，所以同时死去、同时在新位置炸成一个球壳，"
+        "每一发都是它出生那一刻的颜色。点一下鼠标，就在光标处放一发",
         layers=[
             Layer("shell", 3, motion="teleport", teleport_every=110, look="none"),
-            Layer("spark", 24000, [Pull(MOUSE, sweep(10, 200))], spawn="above", velocity="random",
-                  start_speed=7, life=110, life_jitter=0.0, friction=0.002,
-                  color_mode="age", color=[255, 245, 210], color2=[255, 60, 40]),
+            Layer("spark", 24000, [Pull(MOUSE, sweep(10, 200))], spawn="above", velocity="sphere",
+                  start_speed=6, life=110, life_jitter=0.0, friction=0.002, click_burst=2500,
+                  color_mode="birth"),
         ],
-        wind=[0.0, 0.09], trail=0.8, blend="add", glow=0.55,
+        wind=[0.0, 0.09], trail=0.8, blend="add", glow=0.55, click_invert=False,
+        palette=Palette(hue=20, hue_speed=25, saturation=0.6, value=1.0),
     )
 
 
@@ -180,10 +182,10 @@ def fireworks():
 
 def black_hole():
     return Preset(
-        "黑洞", "星尘从屏幕边缘出生，绕着中心的黑洞螺旋坠落，越近越快越亮，越过视界就消失；"
+        "黑洞", "星尘从屏幕边缘出生，绕着中心的黑洞螺旋坠落，越近越快越亮，越过视界就被吞掉；"
         "然后在边缘重生，吸积盘永不枯竭",
         layers=[Layer("disk", 30000, [
-            Pull(CENTER, Field("classic", 90, min_dist=18)),
+            Pull(CENTER, Field("classic", 90, min_dist=18, absorb=16)),
             Pull(CENTER, Field("vortex", 30, min_dist=18)),
             Pull(MOUSE, push(180, 120)),
         ], spawn="edges", velocity="orbit", start_speed=3, variety=0.5, jitter=0.02,
@@ -260,13 +262,14 @@ def pocket_universe():
 def fish():
     return Preset(
         "鱼群", "一万条鱼被关在水族箱里：跟随邻居、互相避让、撞到玻璃就转向，几条领头鱼带着全群打转；"
-        "鼠标是伸进水里的手",
+        "慢慢移动光标，它们只是绕开你，猛地一划，整群鱼瞬间炸开再重新聚拢",
         layers=[
             Layer("leader", 4, motion="path", path_size=[0.7, 0.6], path_freq=[3, 2], path_speed=0.01,
                   path_spread=0.25, look="none"),
             Layer("fish", 10000, [
                 Pull(ABOVE, Field("classic", 4, power=0.5, min_dist=10, inner_radius=50, inner_gain=0.1)),
-                Pull(MOUSE, push(300, 150)),
+                Pull(MOUSE, Field("startle", 0.45, max_dist=280)),
+                Pull(MOUSE, push(160, 60)),
             ], align=0.14, pressure=0.1, cell=18, jitter=0.04, max_speed=3.8, min_speed=1.6, variety=0.4,
                 velocity="random", start_speed=2, size=2,
                 color_mode="speed", color=[40, 110, 150], color2=[220, 240, 255], speed_ref=4),
@@ -277,11 +280,11 @@ def fish():
 
 def fireflies():
     return Preset(
-        "萤火虫", "夏夜的草地：几千只萤火虫随意游荡，各自按自己的节奏亮起又熄灭；鼠标靠近它们会散开",
-        layers=[Layer("fly", 1400, [Pull(MOUSE, push(120, 110))], motion="wander", life=150, life_jitter=0.6,
-                      fade=True, max_speed=1.2, friction=0.05, look="dot", dot=4,
-                      color_mode="fixed", color=[255, 230, 120], brightness=1.3)],
-        trail=0.4, blend="add", glow=0.8, background=[6, 14, 8], click_invert=False,
+        "萤火虫", "夏夜的草地：三百只萤火虫慢慢游荡，平时是暗的，各自按自己的节奏一闪；鼠标靠近它们会散开",
+        layers=[Layer("fly", 320, [Pull(MOUSE, push(140, 120))], motion="wander", max_speed=0.6, friction=0.05,
+                      look="dot", dot=26, dot_soft=1.0, twinkle=1.0, twinkle_period=4.0,
+                      color_mode="fixed", color=[255, 220, 100], brightness=1.0)],
+        trail=0.4, blend="add", glow=0.8, background=[3, 8, 5], click_invert=False,
     )
 
 
@@ -314,47 +317,18 @@ def campfire():
     )
 
 
-def hourglass():
-    return Preset(
-        "沙漏", "一股细沙从屏幕中央落下，在地面堆成小山，堆高了会向两边滑开；沙粒寿命一到就回到上方再落一次；"
-        "鼠标可以把沙堆铲开",
-        layers=[Layer("sand", 20000, [Pull(MOUSE, push(260, 120)), Pull(MOUSE, sweep(10, 200))],
-                      spawn="center", velocity="random", start_speed=0.6, pressure=0.3, cell=8, jitter=0.03,
-                      life=1400, life_jitter=0.9, fade=False, wind=1.0,
-                      color_mode="speed", color=[190, 160, 110], color2=[255, 240, 210], speed_ref=4)],
-        friction=0.003, wind=[0.0, 0.08], edge="bounce", bounce=0.2, background=[14, 12, 10],
-    )
-
-
 def will_o_wisp():
     return Preset(
         "鬼火", "几团幽绿的鬼火在黑暗里游荡，身后拖着一缕缕慢慢消散的烟；鼠标靠近，它们会躲开",
         layers=[
             Layer("wisp", 6, [Pull(MOUSE, push(260, 160))], motion="wander", max_speed=1.6, friction=0.03,
-                  look="dot", dot=9, color_mode="fixed", color=[150, 255, 190]),
+                  look="dot", dot=18, dot_soft=0.85, color_mode="fixed", color=[150, 255, 190], brightness=1.4),
             Layer("smoke", 9000, [], spawn="above", velocity="random", start_speed=0.5, life=220,
                   life_jitter=0.4, friction=0.02, jitter=0.03, flow=1.0,
-                  color_mode="age", color=[120, 230, 170], color2=[20, 50, 60], brightness=0.9),
+                  color_mode="age", color=[120, 230, 170], color2=[20, 50, 60], brightness=1.2),
         ],
         flow=Flow(True, 0.03, 300, 0.2), trail=0.5, blend="add", glow=0.5, background=[4, 6, 8],
         click_invert=False,
-    )
-
-
-def lissajous():
-    return Preset(
-        "利萨如", "三条利萨如曲线各由几千个点铺满，以不同的速度转动，颜色随运动方向变化，"
-        "长拖尾让它们织成一张发光的网",
-        layers=[
-            Layer("a", 6000, motion="path", path_size=[0.8, 0.7], path_freq=[3, 2], path_speed=0.02,
-                  path_spread=1.0, color_mode="direction", brightness=1.5),
-            Layer("b", 6000, motion="path", path_size=[0.6, 0.75], path_freq=[5, 4], path_speed=-0.013,
-                  path_spread=1.0, color_mode="direction", brightness=1.5),
-            Layer("c", 6000, motion="path", path_size=[0.85, 0.5], path_freq=[2, 3], path_speed=0.009,
-                  path_spread=1.0, color_mode="direction", brightness=1.5),
-        ],
-        trail=0.9, blend="add", glow=0.5,
-        palette=Palette(hue=0, hue_speed=8, saturation=0.7, value=0.9),
     )
 
 
@@ -385,19 +359,6 @@ def kaleidoscope():
     )
 
 
-def whirlpool():
-    return Preset(
-        "漩涡", "屏幕中心的引力加漩涡把三万个点卷成一个旋转的碗；鼠标在水面上压出一个洞，洞会被旋涡慢慢填平",
-        layers=[Layer("water", 30000, [
-            Pull(CENTER, Field("classic", 25, min_dist=10)),
-            Pull(CENTER, Field("vortex", 14, min_dist=10)),
-            Pull(MOUSE, push(180, 140)),
-        ], jitter=0.06, variety=0.5, velocity="orbit", start_speed=3,
-            color_mode="speed", color=[50, 40, 140], color2=[120, 230, 255], speed_ref=6, brightness=1.5)],
-        friction=0.0005, trail=0.5, blend="add", glow=0.35,
-    )
-
-
 def atom():
     return Preset(
         "原子", "三层电子壳各自绕着原子核旋转，速度不同、颜色不同；核是一团互相吸引的粒子，鼠标能把壳层推变形",
@@ -419,19 +380,6 @@ def atom():
                   color_mode="fixed", color=[150, 255, 200]),
         ],
         friction=0.003, trail=0.6, blend="add", glow=0.45,
-    )
-
-
-def halo():
-    return Preset(
-        "光环", "一圈圈光环始终套在你的鼠标上，跟着它走、围着它转；鼠标停下，环就慢慢收拢成一个整齐的圆",
-        layers=[Layer("ring", 16000, [
-            Pull(ABOVE, Field("ring", 2.0, radius=140)),
-            Pull(ABOVE, Field("vortex", 12, min_dist=20)),
-            Pull(ABOVE, Field("drag", 3, max_dist=600)),
-        ], variety=0.7, jitter=0.05, spawn="mouse", velocity="orbit", start_speed=4,
-            color_mode="speed", color=[255, 150, 60], color2=[255, 250, 220], speed_ref=7)],
-        friction=0.003, trail=0.6, blend="add", glow=0.4, click_invert=False,
     )
 
 
@@ -521,25 +469,235 @@ def marbles():
     )
 
 
+# ------------------------------------------------------------------ new: cosmos
+
+def warp():
+    return Preset(
+        "曲速", "星星从光标周围涌出，越飞越快、拉成光线，像飞船跃入超空间；光标就是航向，移到哪里就朝哪里飞。"
+        "按住鼠标会倒车",
+        layers=[Layer("star", 2500, [Pull(MOUSE, Field("classic", -0.0025, power=-1))],
+                      spawn="mouse_ring", spawn_radius=70, spawn_spread=55, velocity="outward", start_speed=0.4,
+                      life=400, life_jitter=0.5,
+                      color_mode="speed", color=[30, 45, 110], color2=[255, 255, 255], speed_ref=14, size=2)],
+        friction=0.0, edge="respawn", trail=0.8, blend="add", glow=0.6,
+    )
+
+
+def constellation():
+    return Preset(
+        "星座", "一片缓缓漂移、轻轻闪烁的星空。光标像一支手电筒：它照到的地方，每颗亮星和离它最近的两颗连起来，"
+        "拼出一个个星座；移开以后连线就熄灭",
+        layers=[
+            Layer("star", 420, [], jitter=0.006, max_speed=0.2, friction=0.0, look="dot", dot=4, dot_soft=0.4,
+                  links=130, link_max=2, link_brightness=0.8, link_reveal=340, twinkle=0.3, twinkle_period=2.5,
+                  color_mode="rainbow", velocity="random", start_speed=0.1, brightness=1.1),
+            Layer("dust", 2500, [], jitter=0.004, max_speed=0.15, friction=0.0, twinkle=0.5, twinkle_period=3.0,
+                  color_mode="rainbow", brightness=0.55, velocity="random", start_speed=0.05),
+        ],
+        background=[3, 5, 14], click_invert=False,
+        palette=Palette(hue=220, hue_speed=0, saturation=0.22, value=1.0, spread=140),
+    )
+
+
+# ------------------------------------------------------------------ new: nature
+
+def aurora():
+    return Preset(
+        "极光", "一道光幕挂在一条看不见的波浪线上：光从底边升起，由绿变紫，渐渐淡去，"
+        "整片幕布被高空的风慢慢折叠；鼠标划过会搅动它",
+        layers=[
+            Layer("band", 400, motion="path", path_size=[1.0, 0.12], path_freq=[1, 3], path_center=[0.5, 0.7],
+                  path_speed=0.01, path_spread=0.5, look="none"),
+            Layer("light", 30000, [Pull(MOUSE, sweep(10, 260))], spawn="above", velocity="zero", life=220,
+                  life_jitter=0.5, wind=1.0, flow=1.0, friction=0.01,
+                  color_mode="age", color=[90, 255, 150], color2=[150, 60, 255]),
+        ],
+        wind=[0.0, -0.05], flow=Flow(True, 0.03, 500, 0.1), trail=0.8, blend="add", glow=0.35,
+        background=[2, 4, 12], click_invert=False,
+    )
+
+
+def snowflake():
+    return Preset(
+        "冰晶", "一片雪花从中心慢慢长出来：水汽分子随机游走，碰到冰晶就冻住（扩散限制聚集）；一个位置要被碰到"
+        "四次才结冰，所以枝条又细又直。只长一个楔形，六重旋转加镜像拼成整片雪花。长好后停留十几秒，"
+        "化掉，再长一片新的。安静的一张，不跟鼠标互动（面板里可以打开鼠标融化）",
+        layers=[Layer("ice", 5500, [], motion="grow", grow_seed="center", grow_fold=6, grow_walkers=220,
+                      grow_speed=6, grow_noise=4, grow_hold=12, grow_walker_light=0.25,
+                      color_mode="birth", size=2)],
+        symmetry=6, mirror=True, blend="add", glow=0.7, background=[3, 6, 16], click_invert=False,
+        palette=Palette(hue=190, hue_speed=1.2, saturation=0.4, value=1.0),
+    )
+
+
+def slime_mould():
+    return Preset(
+        "黏菌", "六万只没有大脑的黏菌：每只只会闻前方左、中、右三个方向，朝气味最浓的地方转，边爬边留下气味。"
+        "它们一起织出一张不断重组的输送网络；光标是食物，网络会朝它长过去，按住鼠标就变成驱虫剂",
+        layers=[Layer("mould", 60000, [], motion="slime", spawn="random", velocity="random",
+                      slime_angle=45, slime_turn=22.5, slime_dist=27, slime_speed=3, slime_decay=0.1,
+                      slime_cell=3, slime_show=0.35, slime_mouse=30, slime_mouse_radius=30,
+                      life=350, life_jitter=0.9, fade=False, look="none",
+                      color_mode="fixed", color=[255, 200, 90])],
+        background=[5, 4, 2],
+    )
+
+
+# ------------------------------------------------------------------ new: chaos
+
+def butterfly():
+    return Preset(
+        "蝴蝶效应", "三万个点一开始挤在 Lorenz 吸引子上一段极短的线段里，几乎是同一个点。几秒后它们被拉成一条"
+        "彩虹丝带，再被一遍遍折叠，半分钟后散满整只蝴蝶：起点差一点点，结局完全不同。它在三维空间里慢慢转，"
+        "左右移动光标可以把它转过来；每三十秒重新开始",
+        layers=[Layer("air", 30000, [], motion="flow3d", life=1800, life_jitter=0.0, fade=False,
+                      color_mode="index", brightness=1.4)],
+        trail=0.8, blend="add", glow=0.45, click_invert=False,
+        flow3d=Flow3D("lorenz", spin=0.005, start="blob", blob=0.01),
+        palette=Palette(hue=0, hue_speed=0, saturation=0.75, value=1.0, spread=300),
+    )
+
+
+def apple_core():
+    return Preset(
+        "苹果核", "Aizawa 吸引子：三万个点在三维空间里顺着同一组方程流动，绕出一个中间穿着管子的球，"
+        "像一枚苹果核；它慢慢自转，远处更暗，移动光标可以把它转过来看",
+        layers=[Layer("air", 30000, [], motion="flow3d", color_mode="speed", color=[60, 120, 230],
+                      color2=[255, 200, 150], speed_ref=9, brightness=1.4)],
+        trail=0.7, blend="add", glow=0.45, click_invert=False,
+        flow3d=Flow3D("aizawa", spin=0.01, tilt=20),
+    )
+
+
+def pendulums():
+    return Preset(
+        "混沌摆", "九百个双摆挂在同一个支点上，放手的角度彼此只差千分之一度。一开始它们像同一个摆，"
+        "几秒后突然散成一把彩虹扇子，然后彻底乱成一团；二十秒后重新放手。点一下鼠标，就从光标的位置把它们全部放开",
+        layers=[Layer("bob", 900, [], motion="pendulum", pend_pivot=[0.5, 0.47], pend_size=0.45, pend_angle=125,
+                      pend_spread=0.001, pend_arms=250, pend_speed=0.8, life=1200, life_jitter=0.0,
+                      color_mode="index", size=2)],
+        trail=0.3, blend="add", glow=0.6,
+        palette=Palette(hue=0, hue_speed=0, saturation=0.75, value=1.0, spread=300),
+    )
+
+
+# ------------------------------------------------------------------ new: geometry
+
+def sunflower():
+    return Preset(
+        "向日葵", "六千颗种子按向日葵的方式排列：每颗比上一颗多转 137.5°（黄金角），自然排成斐波那契螺旋。"
+        "这个角度在缓慢地来回摆动，偏一点点，螺旋就变成辐条、漩涡、星系；种子有弹性，鼠标能把它们拨开",
+        layers=[Layer("seed", 6000, [Pull(MOUSE, push(300, 100))], motion="path", path_shape="sunflower",
+                      path_size=[0.92, 0.92], path_speed=0.0, path_angle=137.508, path_sweep=0.15,
+                      path_sweep_period=120, home=0.06, damping=0.15, look="dot", dot=4,
+                      color_mode="index")],
+        trail=0.5, blend="add", glow=0.5, background=[8, 6, 4],
+        palette=Palette(hue=30, hue_speed=2, saturation=0.75, value=0.95, spread=360),
+    )
+
+
+def field_lines():
+    return Preset(
+        "电场线", "三颗正电荷沿轨迹慢慢漂移，光标是一颗负电荷。小粒子从正电荷出发，每一步都严格顺着电场走，"
+        "画出一根根电场线，最后被光标吸收；挪动光标，整张场线图跟着弯过来，按住鼠标光标就变成正电荷",
+        layers=[
+            Layer("charge", 3, motion="path", path_size=[0.55, 0.42], path_freq=[1, 2], path_speed=0.006,
+                  path_spread=0.33, look="dot", dot=10, color_mode="fixed", color=[255, 150, 120]),
+            Layer("line", 9000, [Pull(ABOVE, Field("classic", -40, min_dist=2)),
+                                 Pull(MOUSE, Field("classic", 120, min_dist=2, absorb=14))],
+                  spawn="above_ring", spawn_radius=12, velocity="outward", start_speed=2.5, damping=1.0,
+                  min_speed=2.5, max_speed=2.5, life=500, life_jitter=0.3, color_mode="birth", brightness=1.5),
+        ],
+        edge="respawn", trail=0.93, blend="add", glow=0.7, background=[4, 4, 10],
+        palette=Palette(hue=20, hue_speed=0.0, saturation=0.55, value=1.0),
+    )
+
+
+# ------------------------------------------------------------------ new: interaction
+
+def watercolor():
+    return Preset(
+        "水彩", "米色的纸上，三滴颜料轮流落下，被看不见的水流晕开、拉丝，旧的颜色慢慢褪回纸色；"
+        "点一下鼠标就在光标处滴一滴新颜色，划过去能搅动颜料",
+        layers=[
+            Layer("drop", 3, motion="teleport", teleport_every=240, look="none"),
+            Layer("paint", 30000, [Pull(MOUSE, sweep(12, 220))], spawn="above", velocity="random",
+                  start_speed=1.5, life=400, life_jitter=0.6, flow=1.0, click_burst=1500, friction=0.02,
+                  color_mode="birth", size=2),
+        ],
+        trail=0.985, background=[236, 230, 218], click_invert=False,
+        flow=Flow(True, 0.06, 300, 0.08, mode="carry"),
+        palette=Palette(hue=200, hue_speed=6, saturation=0.6, value=0.7),
+    )
+
+
+# ------------------------------------------------------------------ new: words
+
+POEMS = ("床前明月光|疑是地上霜|举头望明月|低头思故乡|"
+         "白日依山尽|黄河入海流|欲穷千里目|更上一层楼|"
+         "千山鸟飞绝|万径人踪灭|孤舟蓑笠翁|独钓寒江雪")
+SERIF = "songti,songtisc,stsong,notoserifcjksc,notoserifcjk,sourcehanserifsc"
+
+
+def stardust_clock():
+    hand = [Pull(MOUSE, push(320, 150)), Pull(MOUSE, sweep(14, 220))]
+    return Preset(
+        "星尘时钟", "一万多颗星尘拼出现在的时间，下面一行是日期和星期；每到整分钟，星尘从旧数字飞向新数字。"
+        "鼠标能把数字吹散，移开后它们会自己飞回去",
+        layers=[
+            Layer("time", 16000, hand, spawn="text", text="{time}", text_size=0.36, text_pos=[0.5, 0.44],
+                  home=0.012, damping=0.06, jitter=0.03, velocity="zero",
+                  color_mode="speed", color=[110, 150, 255], color2=[255, 225, 170], speed_ref=4, brightness=1.2),
+            Layer("date", 3500, hand, spawn="text", text="{date}  {weekday}", text_size=0.065,
+                  text_pos=[0.5, 0.74], home=0.015, damping=0.08, jitter=0.02, velocity="zero",
+                  color_mode="speed", color=[100, 120, 210], color2=[255, 225, 170], speed_ref=4),
+        ],
+        friction=0.0, trail=0.45, blend="add", glow=0.5,
+    )
+
+
+def poem():
+    hand = [Pull(MOUSE, sweep(16, 240)), Pull(MOUSE, push(220, 120))]
+    return Preset(
+        "诗", "星尘写出一句句唐诗，每句停留七秒，再像被风吹起的沙一样飞成下一句；下面是诗名和作者。"
+        "静夜思、登鹳雀楼、江雪轮流出现，鼠标划过就是一阵风",
+        layers=[
+            Layer("line", 17000, hand, spawn="text", text=POEMS, text_period=7, text_size=0.2, text_pos=[0.5, 0.46],
+                  text_font=SERIF, home=0.01, damping=0.05, jitter=0.02, flow=1.0, velocity="zero",
+                  color_mode="speed", color=[230, 200, 150], color2=[255, 250, 235], speed_ref=4, brightness=0.9),
+            Layer("title", 2200, hand, spawn="text", text="静夜思 · 李白|登鹳雀楼 · 王之涣|江雪 · 柳宗元",
+                  text_period=28, text_size=0.045, text_pos=[0.5, 0.72], text_font=SERIF, home=0.012,
+                  damping=0.06, jitter=0.015, velocity="zero", color_mode="fixed", color=[170, 140, 110]),
+        ],
+        friction=0.0, trail=0.55, blend="add", glow=0.45, background=[6, 8, 16],
+        flow=Flow(True, 0.05, 260, 0.12),
+    )
+
+
 GROUPS = [
     ("宇宙", [
-        ("galaxy", galaxy), ("attractor", strange_attractor), ("orrery", orrery),
-        ("black_hole", black_hole), ("comets", comets), ("supernova", supernova),
-        ("saturn", saturn), ("pocket_universe", pocket_universe),
+        ("galaxy", galaxy), ("orrery", orrery), ("black_hole", black_hole), ("comets", comets),
+        ("supernova", supernova), ("saturn", saturn), ("warp", warp), ("constellation", constellation),
     ]),
     ("自然", [
         ("murmuration", murmuration), ("snow_globe", snow_globe), ("fireworks", fireworks),
-        ("fish", fish), ("fireflies", fireflies), ("dandelion", dandelion),
-        ("campfire", campfire), ("hourglass", hourglass), ("will_o_wisp", will_o_wisp),
+        ("snowflake", snowflake), ("slime", slime_mould), ("aurora", aurora), ("fish", fish),
+        ("fireflies", fireflies), ("dandelion", dandelion), ("campfire", campfire), ("will_o_wisp", will_o_wisp),
+    ]),
+    ("混沌", [
+        ("attractor", strange_attractor), ("butterfly", butterfly), ("apple_core", apple_core),
+        ("pendulums", pendulums), ("pocket_universe", pocket_universe),
     ]),
     ("几何", [
-        ("mandala", mandala), ("lissajous", lissajous), ("harmonics", harmonics),
-        ("kaleidoscope", kaleidoscope), ("whirlpool", whirlpool), ("atom", atom),
-        ("halo", halo), ("heartbeat", heartbeat),
+        ("mandala", mandala), ("sunflower", sunflower), ("field_lines", field_lines),
+        ("kaleidoscope", kaleidoscope), ("harmonics", harmonics), ("atom", atom), ("heartbeat", heartbeat),
     ]),
     ("互动", [
-        ("fabric", fabric), ("ink", ink), ("incense", incense), ("ripples", ripples),
-        ("stardust_pen", stardust_pen), ("sprites", sprites), ("marbles", marbles),
+        ("fabric", fabric), ("ink", ink), ("watercolor", watercolor), ("stardust_pen", stardust_pen),
+        ("incense", incense), ("ripples", ripples), ("sprites", sprites), ("marbles", marbles),
+    ]),
+    ("文字", [
+        ("clock", stardust_clock), ("poem", poem),
     ]),
 ]
 

@@ -40,6 +40,12 @@ class Field:
     wake     pushes bodies the way the source is moving (strength = % of its
              velocity per frame); a still source does nothing, a moving cursor
              stirs everything it passes
+    startle  pushes bodies away from the source, in proportion to how fast the
+             source is moving: a still cursor is ignored, a sudden move scares
+             everything off
+
+    absorb > 0: bodies that come closer than this to the source are swallowed
+    and reborn by their layer's birth rule.
 
     pulse > 0 makes the strength breathe: strength * (1 + pulse * sin(2 pi t / period + phase));
     with pulse > 1 it swings between pulling and pushing.
@@ -56,6 +62,7 @@ class Field:
     pulse: float = 0.0
     period: float = 8.0
     phase: float = 0.0
+    absorb: float = 0.0
 
 
 @dataclass
@@ -72,8 +79,11 @@ class Layer:
     pulls: list[Pull] = field(default_factory=list)
 
     # how it moves
-    motion: str = "physics"        # physics | wander | path | attractor | teleport | fixed
+    motion: str = "physics"        # physics | wander | path | attractor | flow3d | grow | slime
+                                   # | pendulum | teleport | fixed
     friction: float | None = None  # None = the preset's friction
+    damping: float = 0.0           # share of velocity lost every frame; 1 = no momentum at all,
+                                   # bodies simply follow the force field (field lines)
     jitter: float = 0.0            # random kick per frame (temperature)
     max_speed: float = 0.0         # 0 = unlimited
     min_speed: float = 0.0         # bodies never slow below this (birds keep flying)
@@ -86,17 +96,77 @@ class Layer:
     align: float = 0.0             # match the average velocity of neighbours (flocking)
     cell: int = 16                 # neighbourhood size for pressure / align, px
 
-    # path: bodies trace a Lissajous curve on their own
+    # path: bodies trace a curve on their own (with home > 0 the curve is elastic: bodies spring
+    # toward their point on it, so the cursor can push them off and they snap back)
+    path_shape: str = "lissajous"  # lissajous | rose | spiro (a Spirograph hypotrochoid) | sunflower
     path_around: str = CENTER      # center | mouse
+    path_center: list[float] = field(default_factory=lambda: [0.5, 0.5])  # when around center
     path_size: list[float] = field(default_factory=lambda: [0.5, 0.4])  # of half the screen
-    path_freq: list[float] = field(default_factory=lambda: [1.0, 2.0])
-    path_speed: float = 0.1        # cycles per second
+                                   # (rose / spiro: radius, of half the shorter side)
+    path_freq: list[float] = field(default_factory=lambda: [1.0, 2.0])  # lissajous
+    path_k: float = 0.375          # rose: petal ratio; spiro: small / big circle
+    path_d: float = 0.8            # spiro: pen distance / small circle
+    path_loops: float = 1.0        # how many turns the bodies spread over (spiro / rose close
+                                   # after several turns)
+    path_speed: float = 0.1        # turns per second
     path_spread: float = 1.0       # how far apart the bodies sit along the curve (1 = evenly)
+    path_spin: float = 0.0         # the whole figure rotates, turns per second
+    path_angle: float = 137.508    # sunflower: angle between one seed and the next (the golden angle)
+    path_sweep: float = 0.0        # sunflower: the angle swings +- this many degrees ...
+    path_sweep_period: float = 120.0  # ... once every this many seconds
 
     # attractor: bodies hop along the preset's strange attractor
     map_blend: float = 1.0         # 1 = jump onto the map each frame, smaller = drift toward it
 
     teleport_every: int = 60       # teleport: every N frames all bodies jump somewhere new
+
+    # grow: diffusion-limited aggregation; walkers wander until they touch the crystal
+    grow_seed: str = "center"      # center | bottom
+    grow_fold: int = 6             # grow one wedge of a 2*fold-fold snowflake (use symmetry
+                                   # = fold and mirror for the full flake); 0 = no folding
+    grow_walkers: int = 120        # how many walk at once (more = faster growth)
+    grow_speed: int = 6            # walking steps per frame
+    grow_noise: int = 1            # a site freezes only after this many touches: cleaner, needle-like
+                                   # arms along the grid axis (noise-reduced DLA)
+    grow_hold: float = 10.0        # seconds to admire the finished crystal before it regrows
+    grow_melt: float = 0.0         # a moving cursor melts the crystal within this radius
+    grow_walker_light: float = 0.2 # brightness of the walkers
+
+    # slime: agents smell a scent map ahead of them, turn toward the strongest smell and lay
+    # more scent where they go (Physarum slime mould): they weave a network of veins
+    slime_angle: float = 22.5      # sensor angle, degrees
+    slime_dist: float = 9.0        # sensor distance, px
+    slime_turn: float = 45.0       # turn per frame toward the scent, degrees
+    slime_speed: float = 1.0       # px per frame
+    slime_deposit: float = 1.0     # scent laid per agent per frame
+    slime_decay: float = 0.1       # share of the scent that evaporates each frame
+    slime_blur: float = 1.0        # diffusion: 0 = none, 1 = a full 3 x 3 blur every frame
+    slime_cell: int = 2            # scent map resolution, px
+    slime_mouse: float = 0.0       # scent added at the cursor each frame (food); hold to invert = poison
+    slime_mouse_radius: float = 24.0
+    slime_show: float = 0.0        # also paint the scent map itself as a glow (0 = only the agents)
+
+    # pendulum: every body is the tip of its own double pendulum, all hung from one pivot
+    pend_pivot: list[float] = field(default_factory=lambda: [0.5, 0.42])
+    pend_size: float = 0.42        # both rods together, of the shorter screen side
+    pend_angle: float = 120.0      # where they are let go, degrees from hanging straight down
+    pend_spread: float = 0.001     # the starting angles differ by this much across the layer, degrees
+    pend_ratio: float = 1.0        # second rod / first rod
+    pend_mass: float = 1.0         # second bob / first bob
+    pend_gravity: float = 9.8
+    pend_speed: float = 1.0        # time scale
+    pend_arms: int = 1             # draw the rods of this many of them
+    pend_click: bool = True        # a click lets every pendulum go again from the cursor
+
+    # text: bodies spring toward the pixels of a line of text (use home > 0)
+    text: str = "{time}"           # "|" separates lines that take turns; {time} {seconds}
+                                   # {date} {weekday} are filled in live
+    text_period: float = 8.0       # seconds per line
+    text_size: float = 0.3         # of the screen height
+    text_pos: list[float] = field(default_factory=lambda: [0.5, 0.5])
+    text_font: str = ""            # system font names, comma separated; empty = a CJK-capable default
+
+    click_burst: int = 0           # a mouse click rebirths this many bodies at the cursor
 
     # life
     life: int = 0                  # frames; 0 = forever
@@ -104,20 +174,34 @@ class Layer:
     fade: bool = True              # fade in after birth and out before death
 
     # birth
-    spawn: str = "random"          # random | center | mouse | edges | grid | circle | above | above_ring
-    spawn_radius: float = 200.0    # circle / above_ring
-    velocity: str = "random"       # zero | random | orbit | outward | inherit
+    spawn: str = "random"          # random | center | mouse | mouse_ring | edges | grid | circle
+                                   # | above | above_ring | text
+    spawn_radius: float = 200.0    # circle / mouse_ring / above_ring
+    spawn_spread: float = 2.0      # how much the ring radius varies, px (large = a fuzzy disk)
+    velocity: str = "random"       # zero | random | orbit | outward | sphere | inherit
     start_speed: float = 2.0
 
     # looks
     look: str = "pixel"            # pixel | dot | none
     size: int = 1                  # pixel square size
     dot: int = 8                   # dot diameter
-    color_mode: str = "palette"    # palette | fixed | speed | direction | age | rainbow
+    dot_soft: float = 0.0          # 0 = a crisp disk, 1 = a soft glow (bokeh)
+    color_mode: str = "palette"    # palette | fixed | speed | direction | age | rainbow | birth | index
+                                   # (birth: the palette hue at the moment of birth, so every
+                                   # burst / click / growth ring gets its own colour;
+                                   # index: a gradient across the layer, body 0 to body N)
     color: list[int] = field(default_factory=lambda: [120, 160, 255])
     color2: list[int] = field(default_factory=lambda: [255, 230, 190])
     speed_ref: float = 6.0         # speed that gets the full second colour
     brightness: float = 1.0
+    twinkle: float = 0.0           # each body flickers: 0 = steady, 1 = dark between short flashes
+    twinkle_period: float = 3.0    # seconds per flicker (each body a little different)
+    links: float = 0.0             # draw a line between bodies closer than this (constellations;
+                                   # small layers only)
+    link_brightness: float = 0.6
+    link_mouse: bool = False       # the cursor joins the constellation too
+    link_reveal: float = 0.0       # > 0: lines only show within this distance of the cursor (a torch)
+    link_max: int = 0              # each body links to at most this many nearest neighbours (0 = all)
 
 
 @dataclass
@@ -156,6 +240,22 @@ class Attractor:
 
 
 @dataclass
+class Flow3D:
+    """A 3D strange attractor (a continuous flow) for layers whose motion is 'flow3d'.
+    It is drawn in perspective and turns around; the cursor can turn it too."""
+    kind: str = "lorenz"           # lorenz | aizawa | thomas | halvorsen | rossler
+    speed: float = 1.0             # time scale
+    scale: float = 0.85            # of the screen's shorter side
+    spin: float = 0.01             # turns per second around the vertical axis
+    tilt: float = 12.0             # degrees: look at it from a little above
+    mouse_turn: float = 0.5        # moving the cursor across the screen turns it this many times
+    perspective: float = 0.4
+    depth_light: float = 0.5       # the far side is this much dimmer
+    start: str = "spread"          # spread: all along the attractor | blob: one tight blob that tears apart
+    blob: float = 0.0005           # blob size, of the attractor's size (also: rebirth scatter)
+
+
+@dataclass
 class Preset:
     title: str = "Untitled"
     description: str = ""
@@ -164,6 +264,8 @@ class Preset:
     friction: float = 0.0005
     friction_shape: str = "round"  # round: by total speed | axis: x and y separately
     wind: list[float] = field(default_factory=lambda: [0.0, 0.0])
+    wind_mode: str = "fixed"       # fixed | tilt: gravity points from the screen centre toward the
+                                   # cursor (strength = length of wind), like tilting a tray
     edge: str = "wrap"             # wrap | bounce | respawn
     bounce: float = 0.8
     click_invert: bool = True      # hold the left mouse button to flip the mouse's forces
@@ -183,6 +285,7 @@ class Preset:
     palette: Palette = field(default_factory=Palette)
     flow: Flow = field(default_factory=Flow)
     attractor: Attractor = field(default_factory=Attractor)
+    flow3d: Flow3D = field(default_factory=Flow3D)
 
 
 # ---------------------------------------------------------------- JSON
@@ -229,7 +332,8 @@ def from_dict(d: dict) -> Preset:
     return _build(Preset, {**d, "layers": layers,
                            "palette": _build(Palette, d.get("palette")),
                            "flow": _build(Flow, d.get("flow")),
-                           "attractor": _build(Attractor, d.get("attractor"))})
+                           "attractor": _build(Attractor, d.get("attractor")),
+                           "flow3d": _build(Flow3D, d.get("flow3d"))})
 
 
 def problems(p: Preset) -> list[str]:
@@ -266,6 +370,8 @@ SCHEMA = {
             F("friction", "摩擦", "log", min=1e-6, max=0.05),
             F("friction_shape", "摩擦形状", "sel", options=[["round", "按总速度（圆）"], ["axis", "按轴（略方）"]]),
             F("wind", "重力 / 风", "vec2", min=-0.3, max=0.3, step=0.005, labels=["→", "↓"]),
+            F("wind_mode", "重力方向", "sel", options=[["fixed", "固定"], ["tilt", "跟着鼠标倾斜"]],
+              hint="倾斜：重力从屏幕中心指向鼠标的方向，大小 = 上面风的长度，像在倾斜一个托盘"),
             F("edge", "墙壁", "sel", options=[["wrap", "环绕"], ["bounce", "反弹"], ["respawn", "出界重生"]]),
             F("bounce", "弹性", "num", min=0, max=1, step=0.01, when={"edge": ["bounce"]}),
             F("click_invert", "按住鼠标反转", "bool", hint="按住左键时，鼠标的所有力反向"),
@@ -311,6 +417,20 @@ SCHEMA = {
             F("attractor.morph_speed", "变形速度", "num", min=0, max=0.3, step=0.001),
             F("attractor.around", "中心", "sel", options=[["center", "屏幕中心"], ["mouse", "鼠标"]]),
         ]),
+        ("三维吸引子（运动方式为 三维吸引子 的层用它）", [
+            F("flow3d.kind", "类型", "sel", options=[["lorenz", "Lorenz（蝴蝶）"], ["aizawa", "Aizawa（苹果核）"],
+                                                  ["thomas", "Thomas（三叶）"], ["halvorsen", "Halvorsen（三臂）"],
+                                                  ["rossler", "Rössler（折叠的带子）"]]),
+            F("flow3d.speed", "时间速度", "num", min=0.05, max=4, step=0.05),
+            F("flow3d.scale", "大小", "num", min=0.2, max=2, step=0.01),
+            F("flow3d.spin", "自转 圈/秒", "num", min=-0.1, max=0.1, step=0.001, symmetric=True),
+            F("flow3d.tilt", "俯视角 度", "num", min=-90, max=90, step=1, symmetric=True),
+            F("flow3d.mouse_turn", "鼠标转动", "num", min=0, max=2, step=0.05, hint="光标从屏幕一边移到另一边，它转这么多圈"),
+            F("flow3d.perspective", "透视", "num", min=0, max=1, step=0.01),
+            F("flow3d.depth_light", "远处变暗", "num", min=0, max=1, step=0.01),
+            F("flow3d.start", "开始时", "sel", options=[["spread", "铺满整个吸引子"], ["blob", "挤在一团（看它被混沌撕开）"]]),
+            F("flow3d.blob", "团的大小", "log", min=1e-7, max=0.1, hint="也是重生时的散布"),
+        ]),
     ],
     "layer": [
         ("", [
@@ -319,14 +439,74 @@ SCHEMA = {
         ]),
         ("运动", [
             F("motion", "方式", "sel", options=[
-                ["physics", "受力运动"], ["wander", "随机游走 + 受力"], ["path", "沿轨迹（利萨如曲线）"],
-                ["attractor", "奇异吸引子"], ["teleport", "瞬移"], ["fixed", "固定"]]),
-            F("path_around", "轨迹中心", "sel", options=[["center", "屏幕中心"], ["mouse", "鼠标"]], when={"motion": ["path"]}),
-            F("path_size", "轨迹大小", "vec2", min=0, max=1.2, step=0.01, labels=["宽", "高"], when={"motion": ["path"]}),
-            F("path_freq", "轨迹频率", "vec2", min=0, max=7, step=0.25, labels=["x", "y"], when={"motion": ["path"]}),
-            F("path_speed", "轨迹速度 圈/秒", "num", min=-0.5, max=0.5, step=0.005, symmetric=True, when={"motion": ["path"]}),
-            F("path_spread", "间隔", "num", min=0, max=1, step=0.01, when={"motion": ["path"]}, hint="1 = 均匀铺满整条曲线"),
+                ["physics", "受力运动"], ["wander", "随机游走 + 受力"], ["path", "沿轨迹"],
+                ["attractor", "奇异吸引子"], ["flow3d", "三维吸引子"], ["grow", "晶体生长（DLA）"],
+                ["slime", "黏菌（信息素）"], ["pendulum", "双摆"], ["teleport", "瞬移"], ["fixed", "固定"]]),
+            F("damping", "阻尼", "num", min=0, max=1, step=0.01,
+              hint="每帧损失的速度比例；1 = 没有惯性，粒子完全顺着力的方向走（画电场线）"),
+            F("path_shape", "轨迹形状", "sel", options=[["lissajous", "利萨如曲线"], ["rose", "玫瑰线"],
+                                                     ["spiro", "繁花曲线"], ["sunflower", "向日葵（黄金角）"]],
+              when={"motion": ["path"]}, hint="回家弹簧 > 0 时轨迹变成有弹性的：鼠标能推开，松开会弹回去"),
+            F("path_around", "轨迹中心", "sel", options=[["center", "屏幕上的固定点"], ["mouse", "鼠标"]], when={"motion": ["path"]}),
+            F("path_center", "固定点位置", "vec2", min=0, max=1, step=0.01, labels=["x", "y"],
+              when={"motion": ["path"], "path_around": ["center"]}),
+            F("path_size", "轨迹大小", "vec2", min=0, max=1.2, step=0.01, labels=["宽", "高"], when={"motion": ["path"]},
+              hint="玫瑰线 / 繁花曲线只用第一个数：半径占短边一半的比例"),
+            F("path_freq", "轨迹频率", "vec2", min=0, max=7, step=0.25, labels=["x", "y"],
+              when={"motion": ["path"], "path_shape": ["lissajous"]}),
+            F("path_k", "比例 k", "num", min=0.02, max=4, step=0.005, when={"motion": ["path"], "path_shape": ["rose", "spiro"]},
+              hint="玫瑰线：花瓣比例；繁花曲线：小圆 / 大圆"),
+            F("path_d", "笔尖距离", "num", min=0, max=2, step=0.01, when={"motion": ["path"], "path_shape": ["spiro"]}),
+            F("path_loops", "铺开的圈数", "num", min=0.1, max=20, step=0.1,
+              when={"motion": ["path"], "path_shape": ["lissajous", "rose", "spiro"]},
+              hint="繁花曲线 / 玫瑰线往往要转好几圈才闭合"),
+            F("path_speed", "轨迹速度 圈/秒", "num", min=-0.5, max=0.5, step=0.001, symmetric=True, when={"motion": ["path"]},
+              hint="向日葵：种子向外流动的速度（每秒流过整朵花的比例）"),
+            F("path_spread", "间隔", "num", min=0, max=1, step=0.01,
+              when={"motion": ["path"], "path_shape": ["lissajous", "rose", "spiro"]}, hint="1 = 均匀铺满整条曲线"),
+            F("path_angle", "发散角 度", "num", min=0, max=360, step=0.001, when={"motion": ["path"], "path_shape": ["sunflower"]},
+              hint="137.508 = 黄金角：种子排成斐波那契螺旋；偏一点点就变成辐条"),
+            F("path_sweep", "发散角摆动 ±度", "num", min=0, max=5, step=0.001, when={"motion": ["path"], "path_shape": ["sunflower"]}),
+            F("path_sweep_period", "摆动周期 秒", "num", min=5, max=1200, step=1,
+              when={"motion": ["path"], "path_shape": ["sunflower"], "path_sweep": "nonzero"}),
+            F("path_spin", "整体旋转 圈/秒", "num", min=-0.1, max=0.1, step=0.001, symmetric=True, when={"motion": ["path"]}),
             F("map_blend", "贴合吸引子", "num", min=0, max=1, step=0.01, when={"motion": ["attractor"]}),
+            F("grow_seed", "种子", "sel", options=[["center", "屏幕中心（雪花）"], ["bottom", "屏幕底边（珊瑚）"]],
+              when={"motion": ["grow"]}),
+            F("grow_fold", "对称折叠", "int", min=0, max=12, step=1, when={"motion": ["grow"]},
+              hint="只长一个楔形，配合画面里同样的万花筒对称 + 镜像得到完美雪花；0 = 不折叠"),
+            F("grow_walkers", "同时游走的粒子", "int", min=1, max=3000, step=1, when={"motion": ["grow"]}),
+            F("grow_speed", "每帧步数", "int", min=1, max=40, step=1, when={"motion": ["grow"]}),
+            F("grow_noise", "降噪（碰几次才冻结）", "int", min=1, max=20, step=1, when={"motion": ["grow"]},
+              hint="大于 1 时枝条更干净、更像针，沿主轴方向生长"),
+            F("grow_hold", "长完后停留 秒", "num", min=0, max=120, step=1, when={"motion": ["grow"]}),
+            F("grow_melt", "鼠标融化半径", "num", min=0, max=300, step=1, when={"motion": ["grow"]}),
+            F("grow_walker_light", "游走粒子亮度", "num", min=0, max=1, step=0.01, when={"motion": ["grow"]}),
+            F("slime_angle", "嗅觉角度 度", "num", min=1, max=90, step=0.5, when={"motion": ["slime"]}),
+            F("slime_dist", "嗅觉距离 px", "num", min=1, max=60, step=0.5, when={"motion": ["slime"]}),
+            F("slime_turn", "转向 度/帧", "num", min=1, max=90, step=0.5, when={"motion": ["slime"]}),
+            F("slime_speed", "爬行速度", "num", min=0.1, max=6, step=0.05, when={"motion": ["slime"]}),
+            F("slime_deposit", "留下的信息素", "num", min=0.01, max=10, step=0.01, when={"motion": ["slime"]}),
+            F("slime_decay", "蒸发", "num", min=0.001, max=0.5, step=0.001, when={"motion": ["slime"]}),
+            F("slime_blur", "扩散", "num", min=0, max=1, step=0.01, when={"motion": ["slime"]}),
+            F("slime_cell", "信息素网格 px", "int", min=1, max=8, step=1, when={"motion": ["slime"]}),
+            F("slime_mouse", "鼠标处的食物", "num", min=-50, max=50, step=0.5, symmetric=True, when={"motion": ["slime"]},
+              hint="正 = 食物，黏菌会长过来；负 = 驱赶。按住鼠标反转"),
+            F("slime_mouse_radius", "食物半径 px", "num", min=2, max=200, step=1,
+              when={"motion": ["slime"], "slime_mouse": "nonzero"}),
+            F("slime_show", "画出信息素", "num", min=0, max=5, step=0.01, when={"motion": ["slime"]},
+              hint="把信息素地图本身画成柔光；0 = 只画黏菌个体"),
+            F("pend_pivot", "支点位置", "vec2", min=0, max=1, step=0.01, labels=["x", "y"], when={"motion": ["pendulum"]}),
+            F("pend_size", "摆长（占短边）", "num", min=0.05, max=1, step=0.01, when={"motion": ["pendulum"]}),
+            F("pend_angle", "放手的角度 度", "num", min=-180, max=180, step=1, symmetric=True, when={"motion": ["pendulum"]}),
+            F("pend_spread", "初始角度差 度", "log", min=1e-9, max=30, when={"motion": ["pendulum"]},
+              hint="所有摆的起点只差这么一点点：越小，它们一起摆得越久，然后才被混沌分开"),
+            F("pend_ratio", "下杆 / 上杆", "num", min=0.1, max=3, step=0.01, when={"motion": ["pendulum"]}),
+            F("pend_mass", "下球 / 上球 质量", "num", min=0.05, max=10, step=0.05, when={"motion": ["pendulum"]}),
+            F("pend_gravity", "重力", "num", min=0.5, max=40, step=0.1, when={"motion": ["pendulum"]}),
+            F("pend_speed", "时间速度", "num", min=0.05, max=4, step=0.05, when={"motion": ["pendulum"]}),
+            F("pend_arms", "画出摆杆的个数", "int", min=0, max=50, step=1, when={"motion": ["pendulum"]}),
+            F("pend_click", "点击从光标处放手", "bool", when={"motion": ["pendulum"]}),
             F("teleport_every", "每 N 帧瞬移", "int", min=1, max=600, step=1, when={"motion": ["teleport"]}),
         ]),
         ("阻力与扰动", [
@@ -352,31 +532,56 @@ SCHEMA = {
         ]),
         ("出生", [
             F("spawn", "位置", "sel", options=[
-                ["random", "随机"], ["center", "屏幕中心"], ["mouse", "鼠标处"], ["edges", "四周边缘"],
-                ["grid", "网格"], ["circle", "屏幕中心圆环"], ["above", "上一层的天体上（发射器）"],
-                ["above_ring", "上一层天体周围的圆环（卫星）"]]),
-            F("spawn_radius", "圆环半径", "num", min=0, max=1000, step=1, when={"spawn": ["circle", "above_ring"]}),
+                ["random", "随机"], ["center", "屏幕中心"], ["mouse", "鼠标处"], ["mouse_ring", "鼠标周围的圆环"],
+                ["edges", "四周边缘"], ["grid", "网格"], ["circle", "屏幕中心圆环"],
+                ["above", "上一层的天体上（发射器）"], ["above_ring", "上一层天体周围的圆环（卫星）"],
+                ["text", "文字（配合回家弹簧）"]]),
+            F("spawn_radius", "圆环半径", "num", min=0, max=1000, step=1,
+              when={"spawn": ["circle", "above_ring", "mouse_ring"]}),
+            F("spawn_spread", "圆环厚度", "num", min=0, max=500, step=1,
+              when={"spawn": ["circle", "above_ring", "mouse_ring"]}, hint="半径的随机起伏；大了就变成一团模糊的圆盘"),
+            F("text", "文字", "text", when={"spawn": ["text"]},
+              hint="用 | 分隔的几句会轮流出现；{time} {seconds} {date} {weekday} 会实时替换"),
+            F("text_period", "每句停留 秒", "num", min=1, max=120, step=0.5, when={"spawn": ["text"]}),
+            F("text_size", "字号（占屏幕高度）", "num", min=0.03, max=0.8, step=0.01, when={"spawn": ["text"]}),
+            F("text_pos", "文字位置", "vec2", min=0, max=1, step=0.01, labels=["x", "y"], when={"spawn": ["text"]}),
+            F("text_font", "字体", "text", when={"spawn": ["text"]}, hint="系统字体名，逗号分隔；留空用默认"),
+            F("click_burst", "点击爆发数量", "int", min=0, max=20000, step=10,
+              hint="点一下鼠标，就有这么多粒子在光标处重生（配合初速度：向外炸开）"),
             F("velocity", "初速度", "sel", options=[
                 ["zero", "静止"], ["random", "随机方向"], ["orbit", "绕行（切向）"], ["outward", "向外炸开"],
+                ["sphere", "球壳爆开（烟花）"],
                 ["inherit", "继承上一层速度"]]),
             F("start_speed", "初速度大小", "num", min=0, max=20, step=0.1),
         ]),
         ("外观", [
             F("look", "画法", "sel", options=[["pixel", "像素点"], ["dot", "圆点"], ["none", "不画"]]),
             F("size", "像素大小", "int", min=1, max=4, step=1, when={"look": ["pixel"]}),
-            F("dot", "圆点直径", "int", min=2, max=40, step=1, when={"look": ["dot"]}),
+            F("dot", "圆点直径", "int", min=2, max=120, step=1, when={"look": ["dot"]}),
+            F("dot_soft", "柔和", "num", min=0, max=1, step=0.01, when={"look": ["dot"]}, hint="0 = 清晰的圆，1 = 柔光（虚化的光斑）"),
             F("color_mode", "颜色", "sel", options=[
                 ["palette", "调色（漂移）"], ["fixed", "固定"], ["speed", "按速度"], ["direction", "按方向（色相环）"],
-                ["age", "按年龄"], ["rainbow", "彩虹散布"]]),
+                ["age", "按年龄"], ["rainbow", "彩虹散布"], ["birth", "出生时刻的颜色"], ["index", "按序号渐变"]]),
             F("color", "颜色 1", "color", when={"color_mode": ["fixed", "speed", "age"]}),
             F("color2", "颜色 2", "color", when={"color_mode": ["speed", "age"]}),
             F("speed_ref", "满色速度", "num", min=0.2, max=20, step=0.1, when={"color_mode": ["speed"]}),
             F("brightness", "亮度", "num", min=0, max=2, step=0.01),
+            F("twinkle", "闪烁", "num", min=0, max=1, step=0.01, hint="每个粒子按自己的节奏明暗；1 = 平时暗、偶尔一闪（萤火虫）"),
+            F("twinkle_period", "闪烁周期 秒", "num", min=0.1, max=20, step=0.1, when={"twinkle": "nonzero"}),
+            F("links", "连线距离", "num", min=0, max=400, step=1,
+              hint="彼此近于这个距离的粒子之间画线（星座）；只适合几百个以内的层"),
+            F("link_brightness", "连线亮度", "num", min=0, max=1.5, step=0.01, when={"links": "nonzero"}),
+            F("link_mouse", "鼠标也连线", "bool", when={"links": "nonzero"}),
+            F("link_max", "每颗最多连几条", "int", min=0, max=12, step=1, when={"links": "nonzero"},
+              hint="只连最近的几颗，像真正的星座；0 = 范围内全部相连"),
+            F("link_reveal", "只在鼠标附近显示 px", "num", min=0, max=1200, step=10, when={"links": "nonzero"},
+              hint="大于 0 时，连线只在光标周围这么远的范围里出现，像拿手电照星空；0 = 到处都画"),
         ]),
     ],
     "field": [
         F("law", "公式", "sel", options=[["classic", "引力"], ["vortex", "漩涡"], ["ring", "轨道环"],
-                                         ["drag", "拖拽（同速）"], ["wake", "尾流（顺着推）"]]),
+                                         ["drag", "拖拽（同速）"], ["wake", "尾流（顺着推）"],
+                                         ["startle", "惊吓（按源的速度推开）"]]),
         F("strength", "强度", "num", min=-200, max=200, symmetric=True),
         F("power", "衰减指数", "num", min=-1, max=3, step=0.05, when={"law": ["classic", "vortex"]},
           hint="1 = 柔和远程，2 = 牛顿，负数 = 弹簧"),
@@ -390,6 +595,7 @@ SCHEMA = {
         F("pulse", "脉动幅度", "num", min=0, max=3, step=0.01, hint=">1 时吸引和排斥交替；轨道环则是半径在呼吸"),
         F("period", "脉动周期 秒", "num", min=0.2, max=60, step=0.1, when={"pulse": "nonzero"}),
         F("phase", "脉动相位", "num", min=0, max=1, step=0.01, when={"pulse": "nonzero"}),
+        F("absorb", "吞噬半径", "num", min=0, max=200, step=1, hint="靠近到这个距离以内的粒子会被吃掉，按出生规则重生"),
     ],
 }
 
@@ -399,4 +605,5 @@ LAW_HINTS = {
     "ring": "弹簧：把粒子拉向半径固定的圆。配合漩涡就是土星环",
     "drag": "把粒子的速度拉向源的速度：粒子被源带着一起走；源静止时就像刹车（强度 = 每帧 %）",
     "wake": "顺着源的运动方向推粒子：鼠标划过时搅动经过的地方，鼠标不动就没有作用（强度 = 每帧 %）",
+    "startle": "按源移动的快慢把粒子推开：鼠标不动时不理你，一动就把它们吓跑",
 }

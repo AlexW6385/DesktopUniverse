@@ -6,8 +6,8 @@ that can be stacked into layers and tuned live from a browser panel.
 
 ![all presets](docs/all.jpg)
 
-32 built-in universes in four groups (宇宙 · 自然 · 几何 · 互动), picked from the
-menu bar; the first nine also sit on hotkeys 1–9. Every one is a few hundred
+41 built-in universes in six groups (宇宙 · 自然 · 混沌 · 几何 · 互动 · 文字), picked
+from the menu bar; nine of them also sit on hotkeys 1–9. Every one is a few hundred
 bytes of parameters over the same engine, and the panel lets you make your own.
 
 ## Run
@@ -59,15 +59,16 @@ flagged in the panel).
 
 | | |
 | --- | --- |
-| **Forces** | `classic` attraction `strength / r^power` (with an inner radius that can push), `vortex` (sideways: swirl), `ring` (a spring toward a circle), `drag` (match the source's velocity), `wake` (pushed along by a moving source: the cursor stirs) |
+| **Forces** | `classic` attraction `strength / r^power` (with an inner radius that can push), `vortex` (sideways: swirl), `ring` (a spring toward a circle), `drag` (match the source's velocity), `wake` (pushed along by a moving source: the cursor stirs), `startle` (pushed away in proportion to how fast the source moves: a still cursor is ignored, a sudden swipe scatters everything); any force can **absorb** (swallow what comes too close: an event horizon) |
 | **Pulse** | any force can breathe on a sine; past 1 it swings between pull and push; rings breathe in radius |
 | **Neighbourhoods** | `pressure` (flow from crowded to empty: sand piles up; negative clumps) and `align` (match neighbours: flocking), computed on a density grid in O(N) |
-| **Home** | a spring back to the birth position; with grid spawning, an elastic sheet |
+| **Home** | a spring back to the birth position; with grid spawning, an elastic sheet; on a path, an elastic curve the cursor can push |
 | **Life** | particles die and are reborn; synced lifetimes plus teleporting parents make fireworks |
-| **Emitters** | particles can be born on (or in a ring around) the bodies of the layer above |
-| **Motion** | physics, wander, a Lissajous path (no mouse needed), a morphing Clifford / de Jong strange attractor, teleport, fixed |
-| **World** | flow field (as wind, or as a current that carries), gravity / wind, walls (wrap, bounce, respawn), friction shape, per-body variety, speed limits, temperature, a breathing light |
-| **Paint** | trails from none to permanent, additive glow, kaleidoscope symmetry with mirror, background colour, colour by palette drift, speed, direction, age or rainbow |
+| **Births** | on (or in a ring around) the bodies of the layer above, at or around the cursor, on the pixels of a line of text; a click can burst particles out at the cursor; bursts can be a 3D shell seen head-on |
+| **Text** | bodies spring to the glyphs of a line of text; lines separated by `\|` take turns, `{time}` `{date}` `{weekday}` are filled in live, so a swarm can be a clock or a poem |
+| **Motion** | physics, wander, paths (Lissajous, rose, Spirograph, sunflower: Vogel's golden-angle spiral), a morphing Clifford / de Jong attractor, **3D attractors** (Lorenz, Aizawa, Thomas, Halvorsen, Rössler) in perspective that the cursor turns, **double pendulums**, **crystal growth** (diffusion-limited aggregation with noise reduction, grown in one wedge and mirrored into a snowflake), **slime mould** (Physarum agents that smell a scent map, turn toward it and lay more), teleport, fixed |
+| **World** | flow field (as wind, or as a current that carries), gravity / wind (fixed, or tilting toward the cursor), walls (wrap, bounce, respawn), friction shape, linear damping (1 = no momentum: bodies walk down field lines), per-body variety, speed limits, temperature, a breathing light |
+| **Paint** | trails from none to minutes long (fading fully to the background, dark or paper), additive glow, soft glowing dots, per-body twinkle, lines between neighbours (all in range or the nearest few, everywhere or only around the cursor), kaleidoscope symmetry with mirror, colour by palette drift, speed, direction, age, rainbow, the moment of birth or position in the layer |
 
 Every one of these is a field in `config.py`; the panel builds itself from
 the schema at the bottom of that file.
@@ -76,10 +77,12 @@ the schema at the bottom of that file.
 
 | Group | Presets |
 | --- | --- |
-| 宇宙 | 双星系 ¹ · 奇异吸引子 ² · 星轨 ⁴ · 黑洞 · 彗星 · 超新星 · 土星环 · 掌中宇宙 |
-| 自然 | 鸟群 ⁵ · 雪景球 ⁸ · 烟花 ⁹ · 鱼群 · 萤火虫 · 蒲公英 · 篝火 · 沙漏 · 鬼火 |
-| 几何 | 曼陀罗 ³ · 利萨如 · 谐振子 · 万花筒 · 漩涡 · 原子 · 光环 · 心跳 |
-| 互动 | 弹性布 ⁶ · 墨流 ⁷ · 香烟 · 涟漪 · 星尘笔 · 精灵 · 弹珠 |
+| 宇宙 | 双星系 ¹ · 星轨 ⁴ · 黑洞 · 彗星 · 超新星 · 土星环 · 曲速 · 星座 |
+| 自然 | 鸟群 ⁵ · 雪景球 ⁸ · 烟花 ⁹ · 冰晶 · 黏菌 · 极光 · 鱼群 · 萤火虫 · 蒲公英 · 篝火 · 鬼火 |
+| 混沌 | 奇异吸引子 ² · 蝴蝶效应 · 苹果核 · 混沌摆 · 掌中宇宙 |
+| 几何 | 曼陀罗 ³ · 向日葵 · 电场线 · 万花筒 · 谐振子 · 原子 · 心跳 |
+| 互动 | 弹性布 ⁶ · 墨流 ⁷ · 水彩 · 星尘笔 · 香烟 · 涟漪 · 精灵 · 弹珠 |
+| 文字 | 星尘时钟 · 诗 |
 
 Superscripts are the hotkey slots. Each preset's description (what it is
 made of, and what the mouse does to it) shows in the panel. The built-ins are
@@ -94,10 +97,10 @@ the app reopens on the preset you used last.
 universe.py     the app: window / wallpaper, controls, panel wiring, presets CRUD
 engine.py       the simulation: forces, neighbourhoods, swarms, painting
 config.py       the data model and the panel schema
-presets.py      the nine built-ins and the preset library
+presets.py      the built-ins and the preset library
 panel.py/.html  the local tuning panel
 desktop.py      macOS: wallpaper window, menu bar, hotkeys, global cursor
-tests/          mechanism, preset and library tests (python -m pytest tests)
+tests/          forces, mechanisms, every preset, the library (python -m pytest tests)
 ```
 
 Physics advances per frame, so the frame cap sets the pace (`[` `]`, `--fps`).
