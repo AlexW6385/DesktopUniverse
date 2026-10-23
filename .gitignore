@@ -5,8 +5,7 @@ venv/
 .idea/
 .vscode/
 .DS_Store
-# sprites the old scripts wrote to disk
-img_sand.png
-img_star.png
-presets_user/_autosave.json
 .pytest_cache/
+# your own presets live here; commit them if you like, but not the bookkeeping
+presets_user/_autosave.json
+presets_user/_state.json

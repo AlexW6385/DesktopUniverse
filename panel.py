@@ -19,8 +19,8 @@ TOKEN_HEADER = "X-Desktop-Universe"   # a custom header: other websites cannot s
 
 
 class Panel:
-    def __init__(self, port: int = 8765):
-        self.inbox: queue.Queue = queue.Queue()
+    def __init__(self, port: int = 8765, inbox: queue.Queue | None = None):
+        self.inbox: queue.Queue = inbox if inbox is not None else queue.Queue()
         self._state = {}
         self._lock = threading.Lock()
         panel = self
@@ -44,6 +44,10 @@ class Panel:
                     with panel._lock:
                         body = json.dumps(panel._state, ensure_ascii=False).encode()
                     self._send(200, body)
+                elif self.path == "/api/schema":
+                    from config import LAW_HINTS, SCHEMA
+                    self._send(200, json.dumps({"schema": SCHEMA, "laws": LAW_HINTS},
+                                               ensure_ascii=False).encode())
                 else:
                     self._send(404, b'{"error": "not found"}')
 
@@ -75,6 +79,10 @@ class Panel:
         self.port = self.server.server_address[1]
         self.url = f"http://127.0.0.1:{self.port}/"
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
+
+    def post(self, cmd, data=None):
+        """Queue a request from elsewhere (menu bar, hotkeys) like a panel request."""
+        self.inbox.put((cmd, data or {}))
 
     def publish(self, state: dict):
         with self._lock:

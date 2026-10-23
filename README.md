@@ -1,15 +1,16 @@
 # DesktopUniverse
 
-A particle playground for your desktop. Tens of thousands of grains of sand
-orbit, flee and swirl around your cursor and a hierarchy of stars, and it can
-run as a live wallpaper behind your desktop icons. Every parameter can be
-tuned live from a browser panel and saved as your own preset.
+A living particle wallpaper. Tens of thousands of particles orbit, flock,
+flow and burst behind your desktop icons, built from a small set of rules
+that can be stacked into layers and tuned live from a browser panel.
 
-| Solar System | Chain | Whirlpool |
+| 1 双星系 Binary Galaxy | 2 奇异吸引子 Strange Attractor | 3 曼陀罗 Mandala |
 | --- | --- | --- |
-| ![Solar System](docs/solar_system.jpg) | ![Chain](docs/chain.jpg) | ![Whirlpool](docs/whirlpool.jpg) |
-| **Galaxy** | **Snow Globe** | **Big Bang** (original) |
-| ![Galaxy](docs/galaxy.jpg) | ![Snow Globe](docs/snow_globe.jpg) | ![Big Bang](docs/big_bang.jpg) |
+| ![](docs/1_galaxy.jpg) | ![](docs/2_attractor.jpg) | ![](docs/3_mandala.jpg) |
+| **4 星轨 Orrery** | **5 鸟群 Murmuration** | **6 弹性布 Fabric** |
+| ![](docs/4_orrery.jpg) | ![](docs/5_murmuration.jpg) | ![](docs/6_fabric.jpg) |
+| **7 墨流 Ink** | **8 雪景球 Snow Globe** | **9 烟花 Fireworks** |
+| ![](docs/7_ink.jpg) | ![](docs/8_snow_globe.jpg) | ![](docs/9_fireworks.jpg) |
 
 ## Run
 
@@ -17,97 +18,76 @@ tuned live from a browser panel and saved as your own preset.
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-python universe.py                    # full screen; the panel opens in your browser
-python universe.py --wallpaper        # live wallpaper under the desktop icons (macOS)
-python universe.py galaxy --window 1280x720
-python universe.py --list             # all presets
+python universe.py               # live wallpaper, on the preset you used last
+python universe.py 4             # start on preset 4
+python universe.py --window 1280x720
+python universe.py --list
 ```
 
-The tuning panel lives at <http://127.0.0.1:8765> (local only). Quit from the
-panel, with `Esc` / `Q` when the window has focus, or `Ctrl+C` in the terminal.
+Control it from:
 
-| Key (window focused) | Action |
-| --- | --- |
-| `Esc` / `Q` | quit |
-| `1`–`9`, `←` `→` | switch preset |
-| `R` / `C` / `Space` | restart / clear / pause |
-| `F` | fps and preset info |
-| `[` `]` | lower / raise the frame cap |
+- **the menu bar ✦**: the nine presets, your own presets, pause, clear, restart, the panel, quit
+- **hotkeys**: `⌃⌥1`–`⌃⌥9` presets, `⌃⌥P` pause, `⌃⌥C` clear, `⌃⌥R` restart.
+  macOS asks for Accessibility permission for the app that runs Python
+  (System Settings → Privacy & Security → Accessibility → your terminal)
+- **the panel** at <http://127.0.0.1:8765>: every parameter, live; keys `1`–`9`, `Space`, `C`, `R` work there too
+- in `--window` mode, the window itself: `1`–`9`, `←` `→`, `Space`, `C`, `R`, `F` info, `[` `]` frame cap, `Esc`
 
 ## How a universe is built
 
-A preset is a **stack of layers**, top to bottom. Each layer is a swarm of
-identical bodies, and **a layer can only be pulled by the layer directly above
-it**. The cursor sits at the very top.
+A preset is a **stack of layers**. Each layer is a swarm of identical bodies,
+and **a layer is only pulled by the layer directly above it**; the cursor sits
+at the very top. The cursor and the screen centre are also available to every
+layer as global sources.
 
 ```
-mouse                 the top (OOPUniverse.py called it the Absolute)
-  star1   (1)         pulled by the mouse
-    star2  (3)        pulled by star1
-      star3  (9)      pulled by star2
-        sand (25000)  pulled by star3
+mouse
+  sun      1      moves on its own Lissajous path
+    planet 4      orbits the sun
+      moon 12     orbits the planets
+        dust 30k  born on the moons, fades out: spirograph trails
 ```
 
-Two sources are global and may reach any level: the **mouse** (the original
-scripts let it pull both stars and sand) and the **screen centre**, a fixed
-anchor that keeps things moving when the cursor is away. Keep upper layers
-small: every body of the layer above is a separate source for every body
-below, so a pull that would cost more than 600k pairs per frame is skipped
-and flagged in the panel.
+Keep upper layers small: every body above is a separate source for every
+body below (pulls costing more than 600k pairs per frame are skipped and
+flagged in the panel).
 
-### Forces (any number per layer)
+### Mechanisms
 
-| Law | What it does |
+| | |
 | --- | --- |
-| `classic` | attraction `g / r^n` toward the source (`n = 1` is the original, `2` is Newton); an inner radius with its own gain turns it into a push near the source |
-| `oop` | the OOPUniverse.py formula, active only inside a distance window |
-| `vortex` | a sideways force, so bodies swirl around the source; add it to `classic` for galaxies |
-| `ring` | a spring toward a circle of a given radius; add `vortex` for rings |
+| **Forces** | `classic` attraction `strength / r^power` (with an inner radius that can push), `vortex` (sideways: swirl), `ring` (a spring toward a circle), `drag` (match the source's velocity), `wake` (pushed along by a moving source: the cursor stirs) |
+| **Pulse** | any force can breathe on a sine; past 1 it swings between pull and push; rings breathe in radius |
+| **Neighbourhoods** | `pressure` (flow from crowded to empty: sand piles up; negative clumps) and `align` (match neighbours: flocking), computed on a density grid in O(N) |
+| **Home** | a spring back to the birth position; with grid spawning, an elastic sheet |
+| **Life** | particles die and are reborn; synced lifetimes plus teleporting parents make fireworks |
+| **Emitters** | particles can be born on (or in a ring around) the bodies of the layer above |
+| **Motion** | physics, wander, a Lissajous path (no mouse needed), a morphing Clifford / de Jong strange attractor, teleport, fixed |
+| **World** | flow field (as wind, or as a current that carries), gravity / wind, walls (wrap, bounce, respawn), friction shape, per-body variety, speed limits, temperature, a breathing light |
+| **Paint** | trails from none to permanent, additive glow, kaleidoscope symmetry with mirror, background colour, colour by palette drift, speed, direction, age or rainbow |
 
-Plus, per preset: a swirling **flow field**, constant **wind / gravity**,
-**walls** (wrap, bounce with elasticity, respawn, or the original rule),
-**trails** from none through fading to permanent, the 120 s **dark cycle**,
-and **hold the mouse button to invert** the cursor's pull. Per layer:
-friction, **jitter** (temperature, which also stops smooth forces from
-collapsing everything into one point), a speed limit, where bodies are born,
-how they start moving, and how they look (1×1 to 3×3 pixels or soft round
-dots, coloured by the drifting palette, a fixed colour, or their speed).
+Every one of these is a field in `config.py`; the panel builds itself from
+the schema at the bottom of that file.
 
 ## Presets
 
-| Group | Presets |
-| --- | --- |
-| **经典 (original)** | `big_bang`, `less_than_nothing`, `waves`, `raindrops`, `yuanqi_xingkong` 缘起性空, `suibo_zhuliu` 随波逐流, `shennv_sanhua` 神女散花 |
-| **新玩法 (new)** | `solar_system`, `chain`, `galaxy`, `saturn`, `smoke`, `snow_globe`, `fountain`, `whirlpool` |
-| **我的 (yours)** | whatever you save from the panel |
+The nine built-ins are read-only and live on keys 1–9. Your own presets are
+JSON files in `presets_user/`, created from the panel: **新建** (blank),
+**保存** (update), **另存为** (create), **重命名**, **删除**. Unsaved edits are
+autosaved every few seconds as **上次的实验**, and the app reopens on the
+preset you used last.
 
-The originals are 1:1 transcriptions of the scripts in `legacy/`: their
-hand-tuned numbers are unchanged, and `tests/test_legacy.py` checks that they
-move particles exactly like the original code. Presets you save go to
-`presets_user/<name>.json` (one file each, safe to edit or share); saving
-under a built-in name overrides it until you delete the copy. The panel also
-autosaves your latest experiment every few seconds as **上次的实验**.
-
-## Live wallpaper (macOS)
-
-`--wallpaper` sinks the window one level above the desktop picture, under the
-icons, on every Space, and lets clicks pass through. The cursor is read
-globally via pyobjc (installed by `requirements.txt` on macOS). The window no
-longer takes keyboard input, so quit from the panel or with `Ctrl+C`.
-
-## Project layout
+## Layout
 
 ```
-universe.py     app: window, keys, wallpaper, panel wiring, autosave
-engine.py       simulation: force laws, swarms, the universe
-config.py       the data model (Preset / Layer / Pull / Field) and JSON I/O
-presets.py      built-in presets and the preset library
-panel.py        local web server for the panel
-panel.html      the tuning panel
-desktop.py      macOS glue: global cursor, wallpaper window
-tests/          the legacy-physics test
-legacy/         the original one-file scripts
+universe.py     the app: window / wallpaper, controls, panel wiring, presets CRUD
+engine.py       the simulation: forces, neighbourhoods, swarms, painting
+config.py       the data model and the panel schema
+presets.py      the nine built-ins and the preset library
+panel.py/.html  the local tuning panel
+desktop.py      macOS: wallpaper window, menu bar, hotkeys, global cursor
+tests/          mechanism, preset and library tests (python -m pytest tests)
 ```
 
-Physics is per frame, so the frame cap changes how fast things look; adjust
-it with `[` `]` or `--fps`.
+Physics advances per frame, so the frame cap sets the pace (`[` `]`, `--fps`).
+The project started as a single pygame script; its history is in git.

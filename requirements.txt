@@ -1,6 +1,7 @@
 pygame>=2.1
 numpy>=1.22
-# macOS: global cursor + --wallpaper
+# macOS: wallpaper window, menu-bar icon, global cursor and hotkeys
 pyobjc-framework-Quartz; sys_platform == "darwin"
-# optional, other systems only, for --global-mouse
+pyobjc-framework-ApplicationServices; sys_platform == "darwin"
+# optional elsewhere, for --global-mouse
 # pyautogui
