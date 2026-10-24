@@ -143,5 +143,5 @@ def test_library_crud(tmp_path):
     assert lib.delete(new) and not (tmp_path / "Café_Cosmos.json").exists()
     with pytest.raises(ValueError):
         lib.save("galaxy", presets.get("galaxy"))                 # built-in names are reserved
-    lib.remember("mandala")
-    assert presets.Library(tmp_path).last() == "mandala"
+    lib.remember("saturn")
+    assert presets.Library(tmp_path).last() == "saturn"

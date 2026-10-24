@@ -9,8 +9,9 @@ that can be stacked into layers and tuned live from a browser panel.
 
 ![all presets](docs/all.jpg)
 
-41 built-in universes in six groups (Cosmos · Nature · Chaos · Geometry · Interactive · Words), picked
-from the menu bar; nine of them also sit on hotkeys 1–9. Every one is a few hundred
+13 built-in universes, side by side, each one different; the first nine also sit on hotkeys 1–9.
+By default the wallpaper moves to a random one every 15 minutes (by the clock, so paused or covered time
+counts too). Every one is a few hundred
 bytes of parameters over the same engine, and the panel lets you make your own.
 
 ## Run
@@ -29,7 +30,7 @@ python universe.py --list
 
 Control it without leaving the wallpaper (the panel is only for editing and never opens by itself):
 
-- **the menu bar ✦**: every preset by group plus your own, next / previous, **Rotate presets**
+- **the menu bar ✦**: every preset plus your own, next / previous, **Rotate presets**
   (every 5 / 15 / 30 / 60 minutes, in order or in **Random order**), pause, **Pause when covered by
   windows** (the simulation sleeps while windows cover the desktop or you are on another Space, so it
   costs nothing while you work), clear, restart, **Start at login**, the panel, quit
@@ -67,7 +68,7 @@ flagged in the panel).
 | **Neighbourhoods** | `pressure` (flow from crowded to empty: sand piles up; negative clumps) and `align` (match neighbours: flocking), computed on a density grid in O(N) |
 | **Home** | a spring back to the birth position; with grid spawning, an elastic sheet; on a path, an elastic curve the cursor can push |
 | **Life** | particles die and are reborn; synced lifetimes plus teleporting parents make fireworks |
-| **Births** | on (or in a ring around) the bodies of the layer above, at or around the cursor, on the pixels of a line of text; a click can burst particles out at the cursor; bursts can be a 3D shell seen head-on |
+| **Births** | on (or in a ring around) the bodies of the layer above, at or around the cursor, on the pixels of a line of text; a click can burst particles out at the cursor; bursts can be a 3D shell seen head-on or a tilted ring |
 | **Text** | bodies spring to the glyphs of a few lines of text; pages separated by `\|` take turns (on a timer, and on a click if you like; text layers with the same timing turn together, so a poem keeps its title), `{time}` `{date}` `{weekday}` are filled in live, so a swarm can be a clock or a poem |
 | **Motion** | physics, wander, paths (Lissajous, rose, Spirograph, sunflower: Vogel's golden-angle spiral), a morphing Clifford / de Jong attractor, **3D attractors** (Lorenz, Aizawa, Thomas, Halvorsen, Rössler) in perspective that the cursor turns, **double pendulums**, **crystal growth** (diffusion-limited aggregation with noise reduction, grown in one wedge and mirrored into a snowflake), **slime mould** (Physarum agents that smell a scent map, turn toward it and lay more), teleport, fixed |
 | **World** | flow field (as wind, or as a current that carries), gravity / wind (fixed, or tilting toward the cursor), walls (wrap, bounce, respawn), friction shape, linear damping (1 = no momentum: bodies walk down field lines), per-body variety, speed limits, temperature, a breathing light |
@@ -78,16 +79,26 @@ the schema at the bottom of that file.
 
 ## Presets
 
-| Group | Presets |
-| --- | --- |
-| Cosmos | Binary Galaxy ¹ · Orrery ⁴ · Black Hole · Comets · Supernova · Saturn's Rings · Warp Speed · Constellations |
-| Nature | Murmuration ⁵ · Snow Globe ⁸ · Fireworks ⁹ · Snowflake · Slime Mould · Aurora · School of Fish · Fireflies · Dandelion · Campfire · Will-o'-the-Wisp |
-| Chaos | Strange Attractor ² · Butterfly Effect · Apple Core · Chaos Pendulums · Pocket Universe |
-| Geometry | Mandala ³ · Sunflower · Field Lines · Kaleidoscope · Harmonics · Atom · Heartbeat |
-| Interactive | Elastic Fabric ⁶ · Marbled Ink ⁷ · Watercolour · Stardust Pen · Incense · Ripples · Sprites · Marbles |
-| Words | Stardust Clock · Poems (public-domain verse; click for the next one) |
+| | | |
+| --- | --- | --- |
+| 1 | **Binary Galaxy** | two cores chase each other; their stars are pulled into spiral arms and a bridge |
+| 2 | **Black Hole** | stardust spirals in from the edges, hotter and faster, until the horizon swallows it |
+| 3 | **Saturn's Rings** | a planet in three rings, with a shepherd moon clearing a gap |
+| 4 | **Constellations** | the cursor is a torch that joins the stars into constellations |
+| 5 | **Murmuration** | fifteen thousand starlings at dusk; the mouse is a hawk |
+| 6 | **Snow Globe** | snow that really piles up and keeps falling, with big flakes drifting past close up |
+| 7 | **Fireworks** | peonies, tilted rings, golden willows and crackles, each on its own fuse; click to launch |
+| 8 | **Campfire** | flames that twist in the turbulence and sparks that spiral up |
+| 9 | **Butterfly Effect** | a blob of thirty thousand points torn apart by the Lorenz attractor, in 3D |
+| | **Field Lines** | particles walk the electric field from three charges into the cursor |
+| | **Kaleidoscope** | stardust around the cursor, copied six times round |
+| | **Heartbeat** | a ring beating lub-dub, throwing ripples of light |
+| | **Marbled Ink** | ink drifting in slow eddies; the mouse is a pen that stirs it |
 
-Superscripts are the hotkey slots. Each preset's description (what it is
+The engine can do more than these use (3D attractors, pendulums, crystal growth, slime mould, text:
+see Mechanisms), and earlier presets that show them off live in the git history.
+
+Each preset's description (what it is
 made of, and what the mouse does to it) shows in the panel. The built-ins are
 read-only; your own presets are JSON files in `presets_user/`, created from
 the panel: **New** (blank), **Save** (update), **Save as** (create), **Rename**,

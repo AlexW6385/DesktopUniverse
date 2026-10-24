@@ -180,7 +180,7 @@ class Layer:
                                    # | above | above_ring | text
     spawn_radius: float = 200.0    # circle / mouse_ring / above_ring
     spawn_spread: float = 2.0      # how much the ring radius varies, px (large = a fuzzy disk)
-    velocity: str = "random"       # zero | random | orbit | outward | sphere | inherit
+    velocity: str = "random"       # zero | random | orbit | outward | sphere | ring | inherit
     start_speed: float = 2.0
 
     # looks
@@ -582,7 +582,7 @@ SCHEMA = {
               hint="A click rebirths this many bodies at the cursor (with an outward start velocity: an explosion)"),
             F("velocity", "Start velocity", "sel", options=[
                 ["zero", "At rest"], ["random", "Random direction"], ["orbit", "Orbiting (sideways)"],
-                ["outward", "Bursting outward"], ["sphere", "A bursting shell (fireworks)"],
+                ["outward", "Bursting outward"], ["sphere", "A bursting shell (fireworks)"], ["ring", "A bursting ring (tilted)"],
                 ["inherit", "Inherited from the layer above"]]),
             F("start_speed", "Start speed", "num", min=0, max=20, step=0.1),
         ]),

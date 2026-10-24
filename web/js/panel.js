@@ -106,8 +106,10 @@ class Panel {
     s.replaceChildren();
     const groups = {};
     for (const [key, title, group, slot] of listing) {
+      const o = el("option", null, slot ? `${title}  (${slot})` : title); o.value = key;
+      if (!group) { s.append(o); continue; }                  // the built-ins, side by side
       if (!groups[group]) { groups[group] = el("optgroup"); groups[group].label = group; s.append(groups[group]); }
-      const o = el("option", null, slot ? `${title}  (${slot})` : title); o.value = key; groups[group].append(o);
+      groups[group].append(o);
     }
     if (!st.key) { const o = el("option", null, "(new preset, not saved)"); o.value = ""; s.prepend(o); }
     s.value = st.key || "";

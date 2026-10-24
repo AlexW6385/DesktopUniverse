@@ -3,7 +3,7 @@ Export the built-in presets and the panel schema for the web version.
 
     python web/export.py
 
-writes web/data.js (presets, groups, hotkey slots, schema, defaults) and, if Pillow is
+writes web/data.js (presets in order, hotkey slots, schema, defaults) and, if Pillow is
 installed, web/thumbs/<key>.jpg from the screenshots in docs/. Needs nothing else:
 config.py and presets.py are plain Python.
 """
@@ -22,7 +22,7 @@ import presets  # noqa: E402
 
 def main():
     data = {
-        "groups": [[group, [key for key, _ in members]] for group, members in presets.GROUPS],
+        "order": presets.BUILTIN_KEYS,
         "slots": presets.SLOTS,
         "presets": {key: config.to_dict(make()) for key, make in presets.BUILTIN},
         "schema": config.SCHEMA,
@@ -47,6 +47,9 @@ def main():
         return
     thumbs = ROOT / "web" / "thumbs"
     thumbs.mkdir(exist_ok=True)
+    for old in thumbs.glob("*.jpg"):                       # presets that are gone
+        if old.stem not in presets.BUILTIN_KEYS:
+            old.unlink()
     for key in data["presets"]:
         src = ROOT / "docs" / f"{key}.jpg"
         if src.exists():

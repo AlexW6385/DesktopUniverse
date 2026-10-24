@@ -452,6 +452,7 @@ class Swarm {
       for (let i = 0; i < n; i++) { x[i] = rng.random() * W; y[i] = rng.random() * H; }
     }
     const s = L.start_speed, mode = L.velocity, h0 = this.hueNow();
+    const turn = rng.random() * TAU, ring = { squash: 0.3 + 0.7 * rng.random(), c: Math.cos(turn), s: Math.sin(turn) };
     for (let i = 0; i < n; i++) {
       const rx = x[i] - P.x[i], ry = y[i] - P.y[i], dist = Math.sqrt(rx * rx + ry * ry);
       let ux, uy;
@@ -459,6 +460,11 @@ class Swarm {
       if (mode === "zero") { vx[i] = 0; vy[i] = 0; }
       else if (mode === "orbit") { vx[i] = -uy * s + P.vx[i]; vy[i] = ux * s + P.vy[i]; }
       else if (mode === "outward") { const m = s * (0.3 + 0.7 * rng.random()); vx[i] = ux * m + P.vx[i]; vy[i] = uy * m + P.vy[i]; }
+      else if (mode === "ring") {                           // a flat ring bursting, tilted a different way each time
+        const a = rng.random() * TAU, m = s * (0.96 + 0.04 * rng.random());
+        const x0 = Math.cos(a) * m, y0 = Math.sin(a) * m * ring.squash;
+        vx[i] = x0 * ring.c - y0 * ring.s + P.vx[i]; vy[i] = x0 * ring.s + y0 * ring.c + P.vy[i];
+      }
       else if (mode === "sphere") {                         // a 3D shell bursting, seen head-on: bright rim
         const a = rng.random() * TAU, c = rng.random() * 2 - 1;
         const m = s * Math.sqrt(1 - c * c) * (0.93 + 0.07 * rng.random());
@@ -1149,7 +1155,9 @@ class Universe {
       if (L.motion === "fixed") continue;
       if (L.motion === "teleport") {
         if (this.frame % Math.max(1, L.teleport_every) === 0) {
-          for (let i = 0; i < n; i++) { sw.px[i] = this.rng.random() * W; sw.py[i] = this.rng.random() * H; }
+          for (let i = 0; i < n; i++) {                  // clear of the edges
+            sw.px[i] = (0.08 + 0.84 * this.rng.random()) * W; sw.py[i] = (0.08 + 0.84 * this.rng.random()) * H;
+          }
           sw.vx.fill(0); sw.vy.fill(0);
         }
         continue;

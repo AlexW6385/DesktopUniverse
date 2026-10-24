@@ -473,6 +473,13 @@ class Swarm:
             vel = np.column_stack([-unit[:, 1], unit[:, 0]]) * s + ref_vel
         elif L.velocity == "outward":
             vel = unit * (s * (0.3 + 0.7 * rng.random(n)))[:, None] + ref_vel
+        elif L.velocity == "ring":                   # a flat ring bursting, tilted a different way each time
+            a = rng.random(n) * TAU
+            squash, turn = rng.uniform(0.3, 1.0), rng.random() * TAU
+            m = s * (0.96 + 0.04 * rng.random(n))
+            x, y = np.cos(a) * m, np.sin(a) * m * squash
+            vel = np.column_stack([x * math.cos(turn) - y * math.sin(turn),
+                                   x * math.sin(turn) + y * math.cos(turn)]) + ref_vel
         elif L.velocity == "sphere":                 # a 3D shell bursting, seen head-on: bright rim
             a = rng.random(n) * TAU
             m = s * np.sqrt(1 - rng.uniform(-1, 1, n) ** 2) * (0.93 + 0.07 * rng.random(n))
@@ -1193,7 +1200,7 @@ class Universe:
                 continue
             if L.motion == "teleport":
                 if self.frame % max(1, L.teleport_every) == 0:
-                    swarm.pos = self.rng.random((len(swarm), 2)) * self.world
+                    swarm.pos = (0.08 + 0.84 * self.rng.random((len(swarm), 2))) * self.world   # clear of the edges
                     swarm.vel[:] = 0
                 continue
             if L.motion == "path":

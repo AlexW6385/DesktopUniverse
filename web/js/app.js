@@ -13,8 +13,7 @@ const store = {
 
 // ------------------------------------------------------------------ the library
 
-const GROUP_OF = {}, ORDER = [];
-for (const [group, keys] of DATA.groups) for (const k of keys) { GROUP_OF[k] = group; ORDER.push(k); }
+const ORDER = DATA.order;                                  // side by side, no categories
 const AUTOSAVE = "_autosave", MINE = "Mine", AUTOSAVED = "Autosaved";
 
 const lib = {
@@ -26,10 +25,10 @@ const lib = {
   title(k) { const r = this.raw(k); return (r && r.title) || k; },
   isMine(k) { return k in this.mine; },
   slot(k) { const i = DATA.slots.indexOf(k); return i >= 0 ? i + 1 : null; },
-  group(k) { return GROUP_OF[k] || (k === AUTOSAVE ? AUTOSAVED : MINE); },
+  group(k) { return k in DATA.presets ? "" : k === AUTOSAVE ? AUTOSAVED : MINE; },
   mineKeys() { return Object.keys(this.mine).sort(); },
   listing() {
-    const out = ORDER.map((k) => [k, this.title(k), GROUP_OF[k], this.slot(k), false]);
+    const out = ORDER.map((k) => [k, this.title(k), "", this.slot(k), false]);
     for (const k of this.mineKeys()) out.push([k, this.title(k), MINE, null, true]);
     if (this.autosaved) out.push([AUTOSAVE, "Last experiment (autosaved)", AUTOSAVED, null, false]);
     return out;
@@ -136,7 +135,8 @@ function hud() {
   const p = app.preset, slot = lib.slot(app.key);
   $("hTitle").textContent = p.title;
   $("hSlot").textContent = slot ? `press ${slot}` : "";
-  $("hGroup").textContent = app.key ? lib.group(app.key) : "New preset";
+  const group = app.key ? lib.group(app.key) : "New preset";
+  $("hGroup").textContent = group ? " · " + group : "";
   $("hDesc").textContent = p.description || "";
   $("barTitle").textContent = p.title;
   document.title = `${p.title} · DesktopUniverse`;
@@ -147,11 +147,11 @@ function hud() {
 function buildGallery() {
   const root = $("gGroups");
   root.replaceChildren();
-  const groups = DATA.groups.map(([g, keys]) => [g, keys]);
+  const groups = [["", ORDER]];
   if (lib.mineKeys().length) groups.push([MINE, lib.mineKeys()]);
   for (const [group, keys] of groups) {
     const h = document.createElement("h3");
-    h.innerHTML = `${group}<span>${keys.length}</span>`;
+    if (group) h.innerHTML = `${group}<span>${keys.length}</span>`;
     const grid = document.createElement("div");
     grid.className = "grid";
     for (const k of keys) {

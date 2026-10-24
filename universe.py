@@ -67,8 +67,10 @@ class App:
         self.inbox: queue.Queue = queue.Queue()
         self.library = presets.Library()
         st = self.library.state()
-        self.rotate = float(rotate if rotate is not None else st.get("rotate", 0))
-        self.rotate_random = bool(st.get("rotate_random", False))
+        # by default a new preset every 15 minutes, in random order; the clock keeps running while
+        # paused or covered, so it is "every quarter of an hour", not "every 15 minutes of showing"
+        self.rotate = float(rotate if rotate is not None else st.get("rotate", 15))
+        self.rotate_random = bool(st.get("rotate_random", True))
         self.pause_hidden = bool(st.get("pause_hidden", True))
         self.hidden = False
         self.last_visibility_check = 0.0
@@ -342,6 +344,8 @@ class App:
                     self.on_event(e)
                 self.drain()
                 self.check_visibility()
+                if self.rotate and time.time() - self.switched_at >= self.rotate * 60:
+                    self.random_other() if self.rotate_random else self.cycle(1)
                 if self.hidden:                       # covered: sleep, keep the menu responsive
                     self.publish()
                     self.clock.tick(4)
@@ -352,8 +356,6 @@ class App:
                 self.present()
                 self.publish()
                 self.autosave()
-                if self.rotate and not self.paused and time.time() - self.switched_at > self.rotate * 60:
-                    self.random_other() if self.rotate_random else self.cycle(1)
                 self.clock.tick(self.fps)
         except KeyboardInterrupt:
             pass
@@ -393,7 +395,7 @@ def main():
     if args.list:
         for key, title, group, slot, _ in lib.listing():
             levels = " → ".join(f"{l.name} {l.count}" for l in lib.get(key).layers)
-            print(f"{slot or ' '}  {key:16s} {title:20s} [{group}]  {levels}")
+            print(f"{slot or ' '}  {key:16s} {title:20s} {f'[{group}]  ' if group else ''}{levels}")
         return
     key = args.preset
     if key and key.isdigit() and 1 <= int(key) <= len(presets.SLOTS):

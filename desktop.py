@@ -21,7 +21,6 @@ DIGIT_KEYCODES = {18: "1", 19: "2", 20: "3", 21: "4", 23: "5", 22: "6", 26: "7",
 LEFT_ARROW, RIGHT_ARROW = 123, 124
 ROTATE_CHOICES = [(0, "Off"), (5, "Every 5 minutes"), (15, "Every 15 minutes"), (30, "Every 30 minutes"),
                   (60, "Every hour")]
-AUTOSAVE_KEY = "_autosave"                  # the library's unsaved experiment
 LAUNCH_AGENT = Path.home() / "Library" / "LaunchAgents" / "com.desktopuniverse.wallpaper.plist"
 
 
@@ -247,22 +246,11 @@ class MacControls:
             target_menu.addItem_(it)
             return it
 
-        # built-ins by group, as submenus; the first nine carry ⌃⌥1-9
-        groups: dict = {}
-        for key, title, group, slot, editable in listing:
-            groups.setdefault(group, []).append((key, title, slot, editable))
-        for group, rows in groups.items():
-            if all(editable or key == AUTOSAVE_KEY for key, _, _, editable in rows):     # your own: below
-                continue
-            sub = AppKit.NSMenu.alloc().init()
-            sub.setAutoenablesItems_(False)
-            for key, title, slot, _ in rows:
-                add(title, f"load:{key}", str(slot) if slot else "", key == current, into=sub)
-            label = group + ("  ·  " + next(t for k, t, *_ in rows if k == current) if any(k == current for k, *_ in rows) else "")
-            holder = AppKit.NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(label, None, "")
-            holder.setSubmenu_(sub)
-            menu.addItem_(holder)
-        mine = [row for row in listing if row[4] or row[0] == AUTOSAVE_KEY]
+        # the built-ins side by side, the first nine on ⌃⌥1-9; then your own
+        builtins = [row for row in listing if not row[2]]
+        for key, title, _, slot, _ in builtins:
+            add(title, f"load:{key}", str(slot) if slot else "", key == current)
+        mine = [row for row in listing if row[2]]
         if mine:
             add("")
             for key, title, *_ in mine:
