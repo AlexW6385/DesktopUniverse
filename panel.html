@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,7 +12,7 @@
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text);
-         font: 13px/1.45 -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; }
+         font: 13px/1.45 -apple-system, "Helvetica Neue", "PingFang SC", sans-serif; }
   header { position: sticky; top: 0; z-index: 5; background: rgba(12,14,19,.95);
            backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); padding: 10px 16px 8px; }
   .bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
@@ -46,7 +46,7 @@
   summary .tag { font-weight: 400; color: var(--muted); font-family: var(--mono); font-size: 12px; }
   summary .spacer { flex: 1; }
   .body { padding: 2px 12px 10px; }
-  .row { display: grid; grid-template-columns: 140px 1fr; gap: 10px; align-items: center; padding: 3px 0; }
+  .row { display: grid; grid-template-columns: 170px 1fr; gap: 10px; align-items: center; padding: 3px 0; }
   .row > label { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .num { display: grid; grid-template-columns: 1fr 96px; gap: 8px; align-items: center; }
   .num input[type=number] { width: 96px; }
@@ -57,7 +57,7 @@
   input[type=range] { width: 100%; accent-color: var(--accent); }
   input[type=color] { width: 46px; height: 24px; padding: 0 2px; }
   .inline { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .hint { color: var(--faint); font-size: 12px; margin: 0 0 4px 150px; }
+  .hint { color: var(--faint); font-size: 12px; margin: 0 0 4px 180px; }
   .sub { color: var(--accent); font-size: 12px; margin: 12px 0 2px; font-weight: 600; }
   .pull { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; margin: 8px 0; background: var(--card2); }
   .pull.off { opacity: .5; }
@@ -71,22 +71,22 @@
 <header>
   <div class="bar">
     <h1>Desktop<span>Universe</span></h1>
-    <select id="presetSel" title="预设（内置的按 1–9）"></select>
-    <button id="bNew" title="从一个空白预设开始">新建</button>
-    <button id="bSave" title="把改动存回这个预设">保存</button>
-    <button id="bSaveAs">另存为…</button>
-    <button id="bRename">重命名…</button>
-    <button id="bDelete" class="danger">删除</button>
-    <span id="namebox"><input id="nameInput" type="text" size="16"><button id="nameOk">确定</button></span>
+    <select id="presetSel" title="Preset (built-ins: keys 1–9)"></select>
+    <button id="bNew" title="Start from a blank preset">New</button>
+    <button id="bSave" title="Save the changes into this preset">Save</button>
+    <button id="bSaveAs">Save as…</button>
+    <button id="bRename">Rename…</button>
+    <button id="bDelete" class="danger">Delete</button>
+    <span id="namebox"><input id="nameInput" type="text" size="16"><button id="nameOk">OK</button></span>
     <span class="sep"></span>
-    <button id="bReset" title="丢掉没保存的改动">还原</button>
-    <button id="bRestart" title="用当前参数重新开始">重开</button>
-    <button id="bPause">暂停</button>
-    <button id="bClear">清屏</button>
-    <button id="bQuit" class="danger">退出</button>
+    <button id="bReset" title="Throw away the unsaved changes">Revert</button>
+    <button id="bRestart" title="Start over with these settings">Restart</button>
+    <button id="bPause">Pause</button>
+    <button id="bClear">Clear</button>
+    <button id="bQuit" class="danger">Quit</button>
   </div>
   <div id="desc"></div>
-  <div id="status">连接中…</div>
+  <div id="status">Connecting…</div>
 </header>
 <main id="form"></main>
 
@@ -218,7 +218,8 @@ function rows(target, specs, obj) {
   for (const spec of specs) {
     if (!visible(spec, obj)) continue;
     const r = el("div", "row");
-    r.append(el("label", null, spec.label), control(spec, obj));
+    const lab = el("label", null, spec.label); lab.title = spec.label;
+    r.append(lab, control(spec, obj));
     r.title = spec.key;
     target.append(r);
     if (spec.hint) target.append(el("div", "hint", spec.hint));
@@ -244,9 +245,9 @@ function card(title, tag, open, key, build, tools) {
 
 // ------------------------------------------------------------ layers and forces
 function sourceName(i, src) {
-  if (src === "mouse") return "鼠标";
-  if (src === "center") return "屏幕中心";
-  return `上一层（${i === 0 ? "鼠标" : P.layers[i - 1].name}）`;
+  if (src === "mouse") return "the mouse";
+  if (src === "center") return "the screen centre";
+  return `the layer above (${i === 0 ? "the mouse" : P.layers[i - 1].name})`;
 }
 
 function pullBox(L, i, p, j) {
@@ -257,14 +258,14 @@ function pullBox(L, i, p, j) {
   const src = el("select");
   for (const v of ["above", "mouse", "center"]) { const o = el("option", null, sourceName(i, v)); o.value = v; src.appendChild(o); }
   src.value = p.source; src.onchange = () => { p.source = src.value; changed(true); };
-  head.append(en, document.createTextNode("来自"), src, el("span", "spacer"),
-              button("删除", () => { L.pulls.splice(j, 1); changed(true); }));
+  head.append(en, document.createTextNode("from"), src, el("span", "spacer"),
+              button("Delete", () => { L.pulls.splice(j, 1); changed(true); }));
   box.append(head);
   rows(box, SCHEMA.field, p.field);
   const hint = LAWS[p.field.law];
   if (hint) box.insertBefore(el("div", "hint", hint), box.children[2] || null);
   if (p.source === "above" && i > 0 && P.layers[i - 1].count * L.count > 600000)
-    box.append(el("div", "hint", `⚠ 上一层 ${P.layers[i - 1].count} 个 × 本层 ${L.count} 个太多，这个力会被跳过`));
+    box.append(el("div", "hint", `⚠ ${P.layers[i - 1].count} above × ${L.count} here is too many pairs: this force is skipped`));
   return box;
 }
 
@@ -273,20 +274,20 @@ function layerCard(L, i) {
   const tools = [
     button("↑", () => { if (i > 0) { [P.layers[i - 1], P.layers[i]] = [P.layers[i], P.layers[i - 1]]; changed(true); } }),
     button("↓", () => { if (i < n - 1) { [P.layers[i + 1], P.layers[i]] = [P.layers[i], P.layers[i + 1]]; changed(true); } }),
-    button("复制", () => { const c = JSON.parse(JSON.stringify(L)); c.name = nextName(L.name.replace(/\d+$/, "")); P.layers.splice(i + 1, 0, c); changed(true); }),
-    button("删除", () => { P.layers.splice(i, 1); changed(true); }),
+    button("Copy", () => { const c = JSON.parse(JSON.stringify(L)); c.name = nextName(L.name.replace(/\d+$/, "")); P.layers.splice(i + 1, 0, c); changed(true); }),
+    button("Delete", () => { P.layers.splice(i, 1); changed(true); }),
   ];
   const count = S && S.counts && S.counts[L.name] !== undefined ? S.counts[L.name] : L.count;
-  const above = i === 0 ? "鼠标" : P.layers[i - 1].name;
-  return card(`第 ${i + 1} 层 · ${L.name}`, `${count} 个 · 受 ${above} 吸引`, true, "layer" + i, (b) => {
+  const above = i === 0 ? "the mouse" : P.layers[i - 1].name;
+  return card(`Layer ${i + 1} · ${L.name}`, `${count} · pulled by ${above}`, true, "layer" + i, (b) => {
     SCHEMA.layer.forEach(([title, specs], k) => {
       if (k === 0) { rows(b, specs, L); return; }
-      const inner = card(title, null, title === "运动" || title === "外观", `layer${i}-${title}`, (x) => rows(x, specs, L));
+      const inner = card(title, null, title === "Motion" || title === "Looks", `layer${i}-${title}`, (x) => rows(x, specs, L));
       b.append(inner);
-      if (title === "运动") {
-        b.append(card("受力（只来自上一层；鼠标和屏幕中心是全局的）", `${L.pulls.length} 个`, true, `layer${i}-pulls`, (x) => {
+      if (title === "Motion") {
+        b.append(card("Forces (from the layer above only; the mouse and the screen centre reach every layer)", `${L.pulls.length}`, true, `layer${i}-pulls`, (x) => {
           L.pulls.forEach((p, j) => x.append(pullBox(L, i, p, j)));
-          x.append(button("+ 添加一个力", () => {
+          x.append(button("+ Add a force", () => {
             L.pulls.push({ source: "above", enabled: true, field: { law: "classic", strength: 20, power: 1,
               min_dist: 5, max_dist: null, inner_radius: 0, inner_gain: 1, outer_gain: 1, radius: 150,
               pulse: 0, period: 8, phase: 0 } });
@@ -332,11 +333,11 @@ function render() {
   form.replaceChildren();
   SCHEMA.preset.forEach(([title, specs], k) =>
     form.append(card(title, k === 0 ? P.title : null, false, "p-" + title, (b) => rows(b, specs, P))));
-  form.append(el("div", "sub", "层（从上到下；每层只受上一层吸引）"));
+  form.append(el("div", "sub", "Layers (top to bottom; each one is pulled only by the layer above)"));
   P.layers.forEach((L, i) => form.append(layerCard(L, i)));
   const adders = el("div", "adders");
-  adders.append(button("+ 星层（圆点，少量，当吸引源）", () => newLayer("star"), ""),
-                button("+ 尘层（像素，大量）", () => newLayer("dust"), ""));
+  adders.append(button("+ Star layer (a few dots that pull)", () => newLayer("star"), ""),
+                button("+ Dust layer (many pixels)", () => newLayer("dust"), ""));
   form.append(adders);
   for (const d of form.querySelectorAll("details")) if (open[d.dataset.key] !== undefined) d.open = open[d.dataset.key];
   window.scrollTo(0, y);
@@ -345,20 +346,20 @@ function render() {
 
 function status(online) {
   const st = $("status");
-  if (!online) { st.replaceChildren(el("span", "warn", "● 未连接：程序没在运行？")); return; }
+  if (!online) { st.replaceChildren(el("span", "warn", "● Not connected: is the app running?")); return; }
   const counts = Object.entries(S.counts).map(([k, v]) => `${k} ${v}`).join(" · ");
   st.replaceChildren(document.createTextNode(
-    `● ${S.fps.toFixed(0)} fps   ${counts}   ${S.mode}${S.hotkeys ? " · ⌃⌥1-9" : ""}${S.paused ? "   已暂停" : ""}`));
+    `● ${S.fps.toFixed(0)} fps   ${counts}   ${S.mode}${S.hotkeys ? " · ⌃⌥1-9" : ""}${S.paused ? "   paused" : ""}`));
   if (P) {
-    const chain = ["鼠标", ...P.layers.map((L) => {
-      const extra = [...new Set(L.pulls.filter((p) => p.enabled && p.source !== "above").map((p) => p.source === "mouse" ? "+鼠标" : "+中心"))];
+    const chain = ["mouse", ...P.layers.map((L) => {
+      const extra = [...new Set(L.pulls.filter((p) => p.enabled && p.source !== "above").map((p) => p.source === "mouse" ? "+mouse" : "+centre"))];
       return L.name + (extra.length ? `(${extra.join("")})` : "");
     })];
-    st.append(el("br"), el("span", "tree", "层级  " + chain.join(" → ")));
+    st.append(el("br"), el("span", "tree", "levels  " + chain.join(" → ")));
   }
   for (const w of S.problems) st.append(el("br"), el("span", "warn", "⚠ " + w));
   if (S.message) st.append(el("br"), el("span", "msg", S.message));
-  $("bPause").textContent = S.paused ? "继续" : "暂停";
+  $("bPause").textContent = S.paused ? "Resume" : "Pause";
   $("bSave").disabled = !S.editable;
   $("bRename").disabled = !S.editable;
   $("bDelete").disabled = !S.editable;
@@ -374,7 +375,7 @@ function fillPresets() {
     if (!groups[group]) { groups[group] = el("optgroup"); groups[group].label = group; s.append(groups[group]); }
     const o = el("option", null, slot ? `${title}  (${slot})` : title); o.value = key; groups[group].append(o);
   }
-  if (!S.current) { const o = el("option", null, "（未保存的新预设）"); o.value = ""; s.prepend(o); }
+  if (!S.current) { const o = el("option", null, "(new preset, not saved)"); o.value = ""; s.prepend(o); }
   s.value = S.current || ""; s.dataset.sig = sig;
 }
 
@@ -400,7 +401,7 @@ function askName(mode, initial) {
   nameMode = mode;
   $("namebox").classList.add("show");
   $("nameInput").value = initial || "";
-  $("nameInput").placeholder = mode === "rename" ? "新名字" : "名字，如 我的星系";
+  $("nameInput").placeholder = mode === "rename" ? "New name" : "A name, e.g. My Galaxy";
   $("nameInput").focus(); $("nameInput").select();
 }
 $("nameOk").onclick = () => {
@@ -416,7 +417,7 @@ function twoClick(btn, label, fn) {
   let armed = 0;
   btn.onclick = () => {
     if (Date.now() - armed < 3000) { armed = 0; btn.textContent = label; fn(); return; }
-    armed = Date.now(); btn.textContent = "再点一次" + label;
+    armed = Date.now(); btn.textContent = label + " — sure?";
     setTimeout(() => { btn.textContent = label; }, 3000);
   };
 }
@@ -426,12 +427,12 @@ $("bNew").onclick = () => cmd("new");
 $("bSave").onclick = () => cmd("save", { preset: P });
 $("bSaveAs").onclick = () => askName("saveas", "");
 $("bRename").onclick = () => askName("rename", P ? P.title : "");
-twoClick($("bDelete"), "删除", () => cmd("delete", { key: S.current }));
+twoClick($("bDelete"), "Delete", () => cmd("delete", { key: S.current }));
 $("bReset").onclick = () => cmd("reset");
 $("bRestart").onclick = () => cmd("restart");
 $("bPause").onclick = () => cmd("pause");
 $("bClear").onclick = () => cmd("clear");
-twoClick($("bQuit"), "退出", () => cmd("quit"));
+twoClick($("bQuit"), "Quit", () => cmd("quit"));
 
 document.addEventListener("keydown", (e) => {
   if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement.tagName) || e.metaKey || e.ctrlKey) return;

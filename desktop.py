@@ -19,7 +19,9 @@ DIGITS = "123456789"
 # US layout key codes for 1-9, in case a layout reports other characters with Option held
 DIGIT_KEYCODES = {18: "1", 19: "2", 20: "3", 21: "4", 23: "5", 22: "6", 26: "7", 28: "8", 25: "9"}
 LEFT_ARROW, RIGHT_ARROW = 123, 124
-ROTATE_CHOICES = [(0, "关闭"), (5, "每 5 分钟"), (15, "每 15 分钟"), (30, "每 30 分钟"), (60, "每小时")]
+ROTATE_CHOICES = [(0, "Off"), (5, "Every 5 minutes"), (15, "Every 15 minutes"), (30, "Every 30 minutes"),
+                  (60, "Every hour")]
+AUTOSAVE_KEY = "_autosave"                  # the library's unsaved experiment
 LAUNCH_AGENT = Path.home() / "Library" / "LaunchAgents" / "com.desktopuniverse.wallpaper.plist"
 
 
@@ -250,7 +252,7 @@ class MacControls:
         for key, title, group, slot, editable in listing:
             groups.setdefault(group, []).append((key, title, slot, editable))
         for group, rows in groups.items():
-            if all(e for *_, e in rows) or group == "自动保存":
+            if all(editable or key == AUTOSAVE_KEY for key, _, _, editable in rows):     # your own: below
                 continue
             sub = AppKit.NSMenu.alloc().init()
             sub.setAutoenablesItems_(False)
@@ -260,32 +262,32 @@ class MacControls:
             holder = AppKit.NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(label, None, "")
             holder.setSubmenu_(sub)
             menu.addItem_(holder)
-        mine = [row for row in listing if row[4] or row[2] == "自动保存"]
+        mine = [row for row in listing if row[4] or row[0] == AUTOSAVE_KEY]
         if mine:
             add("")
             for key, title, *_ in mine:
                 add(title, f"load:{key}", "", key == current)
         add("")
-        add("下一个", "next", "\uf703")                 # ⌃⌥→
-        add("上一个", "prev", "\uf702")                 # ⌃⌥←
+        add("Next", "next", "\uf703")                 # ⌃⌥→
+        add("Previous", "prev", "\uf702")                 # ⌃⌥←
         rot = AppKit.NSMenu.alloc().init()
         rot.setAutoenablesItems_(False)
         for minutes, label in ROTATE_CHOICES:
             add(label, f"rotate:{minutes}", "", float(rotate or 0) == minutes, into=rot)
         add("", into=rot)
-        add("随机顺序", "rotate_random", "", rotate_random, into=rot)
-        holder = AppKit.NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("自动轮换", None, "")
+        add("Random order", "rotate_random", "", rotate_random, into=rot)
+        holder = AppKit.NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Rotate presets", None, "")
         holder.setSubmenu_(rot)
         menu.addItem_(holder)
         add("")
-        add("继续" if paused else "暂停", "pause", "p")
-        add("被窗口盖住时暂停" + ("（现在已暂停）" if hidden else ""), "pause_hidden", "", pause_hidden)
-        add("清屏", "clear", "c")
-        add("重新开始", "restart", "r")
+        add("Resume" if paused else "Pause", "pause", "p")
+        add("Pause when covered by windows" + (" (paused now)" if hidden else ""), "pause_hidden", "", pause_hidden)
+        add("Clear the screen", "clear", "c")
+        add("Restart", "restart", "r")
         add("")
-        add("登录时自动启动", "autostart", "", autostart)
-        add("打开调参面板（编辑预设）…", "panel" if panel_url else None)
-        add("退出 DesktopUniverse", "quit")
+        add("Start at login", "autostart", "", autostart)
+        add("Open the tuning panel (edit presets)…", "panel" if panel_url else None)
+        add("Quit DesktopUniverse", "quit")
         self.item.setMenu_(menu)
 
     def close(self):

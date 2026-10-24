@@ -30,7 +30,7 @@ import pygame
 import desktop
 import presets
 from config import from_dict, layer_template, problems, to_dict
-from engine import Mouse, Universe
+from engine import Mouse, Universe, font_names
 from panel import Panel
 
 
@@ -54,8 +54,7 @@ class App:
 
         self.fps = fps
         self.clock = pygame.time.Clock()
-        self.font = pygame.font.SysFont(
-            "pingfangsc,hiraginosansgb,microsoftyaheiui,notosanscjksc,wenquanyimicrohei,simhei", 22)
+        self.fonts = {}                         # for the overlay, by whether the text needs CJK glyphs
         self.paused = False
         self.show_info = False
         self.banner_until = 0.0
@@ -120,7 +119,7 @@ class App:
         self.rotate = max(0.0, float(minutes))
         self.switched_at = time.time()
         self.library.set_state(rotate=self.rotate)
-        self.say(f"自动轮换：每 {self.rotate:g} 分钟" if self.rotate else "自动轮换：关闭")
+        self.say(f"Rotating presets every {self.rotate:g} minutes" if self.rotate else "Rotating presets: off")
 
     def random_other(self):
         """A random preset that is not the current one (built-ins and yours)."""
@@ -168,17 +167,17 @@ class App:
         elif kind == "rotate_random":
             self.rotate_random = not self.rotate_random
             self.library.set_state(rotate_random=self.rotate_random)
-            self.say("自动轮换：随机顺序" if self.rotate_random else "自动轮换：按列表顺序")
+            self.say("Rotating presets in random order" if self.rotate_random else "Rotating presets in list order")
         elif kind == "pause_hidden":
             self.pause_hidden = not self.pause_hidden
             self.library.set_state(pause_hidden=self.pause_hidden)
-            self.say("被窗口盖住时暂停：开" if self.pause_hidden else "被窗口盖住时暂停：关")
+            self.say("Pause when covered by windows: on" if self.pause_hidden else "Pause when covered by windows: off")
         elif kind == "random":
             self.random_other()
         elif kind == "autostart":
             want = not desktop.autostart_enabled()
             why = desktop.set_autostart(want, launch_args())
-            self.say(why or ("已设置登录时自动启动" if want else "已取消登录时自动启动"))
+            self.say(why or ("Starts at login from now on" if want else "No longer starts at login"))
         elif kind == "new":
             self.load(None, presets.blank())
         elif kind == "restart":
@@ -204,7 +203,7 @@ class App:
             self.universe.reconfigure(self.preset)
             lib.remember(key)
             self.version += 1
-            self.say(f"已保存：{self.preset.title}")
+            self.say(f"Saved: {self.preset.title}")
         elif kind == "rename":
             try:
                 key = lib.rename(data.get("key", self.key), str(data.get("name", "")))
@@ -214,11 +213,11 @@ class App:
                 self.key, self.preset.title = key, lib.get(key).title
                 lib.remember(key)
             self.version += 1
-            self.say("已重命名")
+            self.say("Renamed")
         elif kind == "delete":
             key = data.get("key", self.key)
             if lib.delete(key):
-                self.say(f"已删除：{key}")
+                self.say(f"Deleted: {key}")
                 if key == self.key:
                     self.load(presets.DEFAULT)
                 self.version += 1
@@ -311,8 +310,14 @@ class App:
             if self.panel:
                 lines.append(self.panel.url)
         if self.paused:
-            lines.append("已暂停")
+            lines.append("Paused")
         return lines
+
+    def font_for(self, text):
+        names = font_names(text)
+        if names not in self.fonts:
+            self.fonts[names] = pygame.font.SysFont(names, 22)
+        return self.fonts[names]
 
     def present(self):
         """Draw the overlay for this flip only, so it never burns into trails."""
@@ -320,7 +325,7 @@ class App:
         if not lines:
             pygame.display.flip()
             return
-        surfs = [self.font.render(t, True, (215, 215, 215)) for t in lines]
+        surfs = [self.font_for(t).render(t, True, (215, 215, 215)) for t in lines]
         x, y = 28, self.screen.get_height() - 40 - 28 * len(surfs)     # bottom left, clear of the menu bar
         rect = pygame.Rect(x - 4, y - 4, max(s.get_width() for s in surfs) + 8, 28 * len(surfs) + 8)
         rect = rect.clip(self.screen.get_rect())
@@ -388,7 +393,7 @@ def main():
     if args.list:
         for key, title, group, slot, _ in lib.listing():
             levels = " → ".join(f"{l.name} {l.count}" for l in lib.get(key).layers)
-            print(f"{slot or ' '}  {key:14s} {title:10s} [{group}]  {levels}")
+            print(f"{slot or ' '}  {key:16s} {title:20s} [{group}]  {levels}")
         return
     key = args.preset
     if key and key.isdigit() and 1 <= int(key) <= len(presets.SLOTS):

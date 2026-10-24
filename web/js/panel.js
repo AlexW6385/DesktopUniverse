@@ -23,11 +23,11 @@ function problems(p) {
     if (i && L.pulls.some((pl) => pl.enabled && pl.source === "above")) {
       const above = p.layers[i - 1];
       if (above.count * L.count > DATA.max_pairs)
-        out.push(`${L.name} ← ${above.name}: ${above.count} × ${L.count} 对太多，这个力被跳过了（上层要少）`);
+        out.push(`${L.name} ← ${above.name}: ${above.count} × ${L.count} pairs is too many, so this force is skipped (keep the layer above small)`);
     }
   });
   const names = p.layers.map((l) => l.name);
-  for (const n of new Set(names)) if (names.filter((x) => x === n).length > 1) out.push(`层名 ${n} 重复了`);
+  for (const n of new Set(names)) if (names.filter((x) => x === n).length > 1) out.push(`Two layers are called ${n}`);
   return out;
 }
 
@@ -44,7 +44,7 @@ class Panel {
     $("pSave").onclick = () => this.h.save();
     $("pSaveAs").onclick = () => this.askName("saveas", "");
     $("pRename").onclick = () => this.askName("rename", this.P ? this.P.title : "");
-    this.twoClick($("pDelete"), "删除", () => this.h.remove());
+    this.twoClick($("pDelete"), "Delete", () => this.h.remove());
     $("pReset").onclick = () => this.h.reset();
     $("pExport").onclick = () => this.h.exportJson();
     $("pImport").onclick = () => $("importFile").click();
@@ -88,7 +88,7 @@ class Panel {
     this.nameMode = mode;
     $("namebox").classList.add("show");
     $("nameInput").value = initial || "";
-    $("nameInput").placeholder = mode === "rename" ? "新名字" : "名字，如 我的星系";
+    $("nameInput").placeholder = mode === "rename" ? "New name" : "A name, e.g. My Galaxy";
     $("nameInput").focus(); $("nameInput").select();
   }
 
@@ -96,7 +96,7 @@ class Panel {
     let armed = 0;
     btn.onclick = () => {
       if (Date.now() - armed < 3000) { armed = 0; btn.textContent = label; fn(); return; }
-      armed = Date.now(); btn.textContent = "再点一次" + label;
+      armed = Date.now(); btn.textContent = label + " — sure?";
       setTimeout(() => { btn.textContent = label; }, 3000);
     };
   }
@@ -109,7 +109,7 @@ class Panel {
       if (!groups[group]) { groups[group] = el("optgroup"); groups[group].label = group; s.append(groups[group]); }
       const o = el("option", null, slot ? `${title}  (${slot})` : title); o.value = key; groups[group].append(o);
     }
-    if (!st.key) { const o = el("option", null, "（未保存的新预设）"); o.value = ""; s.prepend(o); }
+    if (!st.key) { const o = el("option", null, "(new preset, not saved)"); o.value = ""; s.prepend(o); }
     s.value = st.key || "";
     $("pSave").disabled = !st.editable;
     $("pRename").disabled = !st.editable;
@@ -120,12 +120,12 @@ class Panel {
     if (!this.P) return;
     const st = this.h.state(), box = $("pstatus");
     const counts = Object.entries(st.counts).map(([k, v]) => `${k} ${v}`).join(" · ");
-    box.replaceChildren(document.createTextNode(`● ${st.fps.toFixed(0)} fps   ${counts}${st.paused ? "   已暂停" : ""}`));
-    const chain = ["鼠标", ...this.P.layers.map((L) => {
-      const extra = [...new Set(L.pulls.filter((p) => p.enabled && p.source !== "above").map((p) => (p.source === "mouse" ? "+鼠标" : "+中心")))];
+    box.replaceChildren(document.createTextNode(`● ${st.fps.toFixed(0)} fps   ${counts}${st.paused ? "   paused" : ""}`));
+    const chain = ["mouse", ...this.P.layers.map((L) => {
+      const extra = [...new Set(L.pulls.filter((p) => p.enabled && p.source !== "above").map((p) => (p.source === "mouse" ? "+mouse" : "+centre")))];
       return L.name + (extra.length ? `(${extra.join("")})` : "");
     })];
-    box.append(el("br"), el("span", "tree", "层级  " + chain.join(" → ")));
+    box.append(el("br"), el("span", "tree", "levels  " + chain.join(" → ")));
     for (const w of problems(this.P)) box.append(el("br"), el("span", "warn", "⚠ " + w));
     if (st.message) box.append(el("br"), el("span", "msg", st.message));
     $("pdesc").textContent = this.P.description || "";
@@ -235,7 +235,8 @@ class Panel {
     for (const spec of specs) {
       if (!this.visible(spec, obj)) continue;
       const r = el("div", "row");
-      r.append(el("label", null, spec.label), this.control(spec, obj));
+      const lab = el("label", null, spec.label); lab.title = spec.label;
+      r.append(lab, this.control(spec, obj));
       r.title = spec.key;
       target.append(r);
       if (spec.hint) target.append(el("div", "hint", spec.hint));
@@ -261,9 +262,9 @@ class Panel {
 
   // ---------------------------------------------------------- layers and forces
   sourceName(i, src) {
-    if (src === "mouse") return "鼠标";
-    if (src === "center") return "屏幕中心";
-    return `上一层（${i === 0 ? "鼠标" : this.P.layers[i - 1].name}）`;
+    if (src === "mouse") return "the mouse";
+    if (src === "center") return "the screen centre";
+    return `the layer above (${i === 0 ? "the mouse" : this.P.layers[i - 1].name})`;
   }
 
   pullBox(L, i, p, j) {
@@ -274,14 +275,14 @@ class Panel {
     const src = el("select");
     for (const v of ["above", "mouse", "center"]) { const o = el("option", null, this.sourceName(i, v)); o.value = v; src.appendChild(o); }
     src.value = p.source; src.onchange = () => { p.source = src.value; this.changed(true); };
-    head.append(en, document.createTextNode("来自"), src, el("span", "spacer"),
-                this.button("删除", () => { L.pulls.splice(j, 1); this.changed(true); }));
+    head.append(en, document.createTextNode("from"), src, el("span", "spacer"),
+                this.button("Delete", () => { L.pulls.splice(j, 1); this.changed(true); }));
     box.append(head);
     this.rows(box, this.SCHEMA.field, p.field);
     const hint = this.LAWS[p.field.law];
     if (hint) box.insertBefore(el("div", "hint", hint), box.children[2] || null);
     if (p.source === "above" && i > 0 && this.P.layers[i - 1].count * L.count > DATA.max_pairs)
-      box.append(el("div", "hint", `⚠ 上一层 ${this.P.layers[i - 1].count} 个 × 本层 ${L.count} 个太多，这个力会被跳过`));
+      box.append(el("div", "hint", `⚠ ${this.P.layers[i - 1].count} above × ${L.count} here is too many pairs: this force is skipped`));
     return box;
   }
 
@@ -294,23 +295,23 @@ class Panel {
     const tools = [
       this.button("↑", () => { if (i > 0) { [P.layers[i - 1], P.layers[i]] = [P.layers[i], P.layers[i - 1]]; this.changed(true); } }),
       this.button("↓", () => { if (i < n - 1) { [P.layers[i + 1], P.layers[i]] = [P.layers[i], P.layers[i + 1]]; this.changed(true); } }),
-      this.button("复制", () => {
+      this.button("Copy", () => {
         const c = DU.clone(L); c.name = this.nextName(L.name.replace(/\d+$/, ""));
         P.layers.splice(i + 1, 0, c); this.changed(true);
       }),
-      this.button("删除", () => { P.layers.splice(i, 1); this.changed(true); }),
+      this.button("Delete", () => { P.layers.splice(i, 1); this.changed(true); }),
     ];
     const st = this.h.state();
     const count = st.counts && st.counts[L.name] !== undefined ? st.counts[L.name] : L.count;
-    const above = i === 0 ? "鼠标" : P.layers[i - 1].name;
-    return this.card(`第 ${i + 1} 层 · ${L.name}`, `${count} 个 · 受 ${above} 吸引`, true, "layer" + i, (b) => {
+    const above = i === 0 ? "the mouse" : P.layers[i - 1].name;
+    return this.card(`Layer ${i + 1} · ${L.name}`, `${count} · pulled by ${above}`, true, "layer" + i, (b) => {
       this.SCHEMA.layer.forEach(([title, specs], k) => {
         if (k === 0) { this.rows(b, specs, L); return; }
-        b.append(this.card(title, null, title === "运动" || title === "外观", `layer${i}-${title}`, (x) => this.rows(x, specs, L)));
-        if (title === "运动") {
-          b.append(this.card("受力（只来自上一层；鼠标和屏幕中心是全局的）", `${L.pulls.length} 个`, true, `layer${i}-pulls`, (x) => {
+        b.append(this.card(title, null, title === "Motion" || title === "Looks", `layer${i}-${title}`, (x) => this.rows(x, specs, L)));
+        if (title === "Motion") {
+          b.append(this.card("Forces (from the layer above only; the mouse and the screen centre reach every layer)", `${L.pulls.length}`, true, `layer${i}-pulls`, (x) => {
             L.pulls.forEach((p, j) => x.append(this.pullBox(L, i, p, j)));
-            x.append(this.button("+ 添加一个力", () => {
+            x.append(this.button("+ Add a force", () => {
               L.pulls.push({ source: "above", enabled: true, field: this.newField(20, 5) });
               this.changed(true);
             }, ""));
@@ -350,11 +351,11 @@ class Panel {
     form.replaceChildren();
     this.SCHEMA.preset.forEach(([title, specs], k) =>
       form.append(this.card(title, k === 0 ? this.P.title : null, false, "p-" + title, (b) => this.rows(b, specs, this.P))));
-    form.append(el("div", "sub", "层（从上到下；每层只受上一层吸引）"));
+    form.append(el("div", "sub", "Layers (top to bottom; each one is pulled only by the layer above)"));
     this.P.layers.forEach((L, i) => form.append(this.layerCard(L, i)));
     const adders = el("div", "adders");
-    adders.append(this.button("+ 星层（圆点，少量，当吸引源）", () => this.newLayer("star"), ""),
-                  this.button("+ 尘层（像素，大量）", () => this.newLayer("dust"), ""));
+    adders.append(this.button("+ Star layer (a few dots that pull)", () => this.newLayer("star"), ""),
+                  this.button("+ Dust layer (many pixels)", () => this.newLayer("dust"), ""));
     form.append(adders);
     for (const d of form.querySelectorAll("details")) if (open[d.dataset.key] !== undefined) d.open = open[d.dataset.key];
     form.scrollTop = y;

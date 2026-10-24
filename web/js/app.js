@@ -15,7 +15,7 @@ const store = {
 
 const GROUP_OF = {}, ORDER = [];
 for (const [group, keys] of DATA.groups) for (const k of keys) { GROUP_OF[k] = group; ORDER.push(k); }
-const AUTOSAVE = "_autosave";
+const AUTOSAVE = "_autosave", MINE = "Mine", AUTOSAVED = "Autosaved";
 
 const lib = {
   mine: store.get("du.mine", {}),                          // your presets, in this browser
@@ -26,19 +26,19 @@ const lib = {
   title(k) { const r = this.raw(k); return (r && r.title) || k; },
   isMine(k) { return k in this.mine; },
   slot(k) { const i = DATA.slots.indexOf(k); return i >= 0 ? i + 1 : null; },
-  group(k) { return GROUP_OF[k] || (k === AUTOSAVE ? "自动保存" : "我的"); },
+  group(k) { return GROUP_OF[k] || (k === AUTOSAVE ? AUTOSAVED : MINE); },
   mineKeys() { return Object.keys(this.mine).sort(); },
   listing() {
     const out = ORDER.map((k) => [k, this.title(k), GROUP_OF[k], this.slot(k), false]);
-    for (const k of this.mineKeys()) out.push([k, this.title(k), "我的", null, true]);
-    if (this.autosaved) out.push([AUTOSAVE, "上次的实验（自动保存）", "自动保存", null, false]);
+    for (const k of this.mineKeys()) out.push([k, this.title(k), MINE, null, true]);
+    if (this.autosaved) out.push([AUTOSAVE, "Last experiment (autosaved)", AUTOSAVED, null, false]);
     return out;
   },
   slug(name) { return name.trim().replace(/[^\p{L}\p{N}_-]+/gu, "_").replace(/^_+|_+$/g, "").slice(0, 60); },
   persist() { store.set("du.mine", this.mine); },
   save(name, preset) {
     const key = this.slug(name);
-    if (!key || key in DATA.presets || key.startsWith("_")) throw new Error(`“${name}” 不能用作名字（内置预设的名字是保留的）`);
+    if (!key || key in DATA.presets || key.startsWith("_")) throw new Error(`“${name}” can’t be used as a name (the built-in presets’ names are taken)`);
     const p = DU.toPlain(preset);
     if (!(key in this.mine)) p.title = name.trim() || key;
     this.mine[key] = p; this.persist();
@@ -46,7 +46,7 @@ const lib = {
   },
   rename(key, name) {
     const nk = this.slug(name);
-    if (!nk || nk in DATA.presets || nk.startsWith("_") || (nk in this.mine && nk !== key)) throw new Error(`“${name}” 不能用作名字`);
+    if (!nk || nk in DATA.presets || nk.startsWith("_") || (nk in this.mine && nk !== key)) throw new Error(`“${name}” can’t be used as a name`);
     const p = this.mine[key]; delete this.mine[key];
     p.title = name.trim(); this.mine[nk] = p; this.persist();
     return nk;
@@ -90,7 +90,7 @@ const canvas = $("sky");
 try {
   app.renderer = new DU.Renderer(canvas);
 } catch (e) {
-  $("fatal").textContent = "这个浏览器打不开 WebGL：" + e.message;
+  $("fatal").textContent = "This browser can’t run WebGL: " + e.message;
   $("fatal").classList.add("show");
   return;
 }
@@ -135,8 +135,8 @@ function step(dir) {
 function hud() {
   const p = app.preset, slot = lib.slot(app.key);
   $("hTitle").textContent = p.title;
-  $("hSlot").textContent = slot ? `按 ${slot}` : "";
-  $("hGroup").textContent = app.key ? lib.group(app.key) : "新预设";
+  $("hSlot").textContent = slot ? `press ${slot}` : "";
+  $("hGroup").textContent = app.key ? lib.group(app.key) : "New preset";
   $("hDesc").textContent = p.description || "";
   $("barTitle").textContent = p.title;
   document.title = `${p.title} · DesktopUniverse`;
@@ -148,7 +148,7 @@ function buildGallery() {
   const root = $("gGroups");
   root.replaceChildren();
   const groups = DATA.groups.map(([g, keys]) => [g, keys]);
-  if (lib.mineKeys().length) groups.push(["我的", lib.mineKeys()]);
+  if (lib.mineKeys().length) groups.push([MINE, lib.mineKeys()]);
   for (const [group, keys] of groups) {
     const h = document.createElement("h3");
     h.innerHTML = `${group}<span>${keys.length}</span>`;
@@ -204,26 +204,26 @@ const panel = new DU.Panel({
   },
   load: (key) => load(key),
   blank() {
-    show(null, { title: "新预设", layers: [{ name: "dust", count: 15000,
+    show(null, { title: "New preset", layers: [{ name: "dust", count: 15000,
       pulls: [{ source: "above", field: { law: "classic", strength: 20, min_dist: 10 } }] }] });
   },
   save() {
-    if (!lib.isMine(app.key)) return say("内置预设是只读的：请用“另存为”");
+    if (!lib.isMine(app.key)) return say("The built-in presets are read-only: use “Save as”");
     lib.mine[app.key] = DU.toPlain(app.preset); lib.persist(); app.edited = false;
-    say("已保存");
+    say("Saved");
   },
   saveAs(name) {
-    try { const key = lib.save(name, app.preset); show(key, lib.get(key), { quiet: true }); say(`已存为“${lib.title(key)}”`); }
+    try { const key = lib.save(name, app.preset); show(key, lib.get(key), { quiet: true }); say(`Saved as “${lib.title(key)}”`); }
     catch (e) { say(e.message); }
   },
   rename(name) {
-    try { const key = lib.rename(app.key, name); app.key = key; show(key, lib.get(key), { quiet: true }); say("已重命名"); }
+    try { const key = lib.rename(app.key, name); app.key = key; show(key, lib.get(key), { quiet: true }); say("Renamed"); }
     catch (e) { say(e.message); }
   },
   remove() {
     if (!lib.isMine(app.key)) return;
     const title = lib.title(app.key);
-    lib.remove(app.key); say(`已删除“${title}”`); load(DATA.slots[0]);
+    lib.remove(app.key); say(`Deleted “${title}”`); load(DATA.slots[0]);
   },
   reset() { if (app.key) load(app.key, { quiet: true }); },
   exportJson() {
@@ -234,14 +234,14 @@ const panel = new DU.Panel({
     a.download = (lib.slug(p.title) || "preset") + ".json";
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    say("已下载：放进桌面版的 <b>presets_user/</b> 文件夹就能在菜单里用");
+    say("Downloaded: drop it into the desktop version’s <b>presets_user/</b> folder to find it in the menu");
   },
   importJson(text) {
     try {
       const p = DU.normalise(JSON.parse(text));
-      if (!p.layers.length) throw new Error("没有任何层");
-      show(null, p, { quiet: true }); say(`读入了“${p.title}”：满意就“另存为”`);
-    } catch (e) { say("读不了这个文件：" + e.message); }
+      if (!p.layers.length) throw new Error("it has no layers");
+      show(null, p, { quiet: true }); say(`Opened “${p.title}”: use “Save as” to keep it`);
+    } catch (e) { say("Can’t read this file: " + e.message); }
   },
   restart: () => restart(),
 });
@@ -283,7 +283,10 @@ canvas.addEventListener("pointermove", (e) => {
 canvas.addEventListener("pointerdown", (e) => {
   toWorld(e); input.real = true; input.outside = false;
   if (e.pointerType === "touch") { input.tap = 2; wake(); }   // a tap is a click; holding is not "pressed"
-  else { input.down = true; try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ok */ } }
+  else {                                                  // held for at least one step, however quick the click
+    input.down = true; input.tap = Math.max(input.tap, 1);
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ok */ }
+  }
 });
 const up = () => { input.down = false; };
 window.addEventListener("pointerup", up);
@@ -319,7 +322,7 @@ $("bGithub").onclick = () => window.open(REPO, "_blank", "noopener");
 
 function pause(v) {
   app.paused = v === undefined ? !app.paused : v;
-  $("lPause").textContent = app.paused ? "继续" : "暂停";
+  $("lPause").textContent = app.paused ? "Resume" : "Pause";
   $("iPause").innerHTML = app.paused ? '<path d="M7 5l12 7-12 7z"/>' : '<path d="M8 5v14M16 5v14"/>';
   $("bPause").classList.toggle("on", app.paused);
 }
@@ -328,7 +331,7 @@ function rotate(v) {
   store.set("du.rotate", app.rotate);
   $("bRotate").classList.toggle("on", app.rotate);
   app.shownAt = performance.now();
-  if (v === undefined) say(app.rotate ? `自动轮播：每 ${ROTATE_SECONDS} 秒换一个` : "自动轮播已关闭");
+  if (v === undefined) say(app.rotate ? `Slideshow: a new preset every ${ROTATE_SECONDS} seconds` : "Slideshow off");
 }
 function fullscreen() {
   if (document.fullscreenElement) document.exitFullscreen();
@@ -410,8 +413,8 @@ $("bRotate").classList.toggle("on", app.rotate);
 if (!store.get("du.seen", false)) {
   store.set("du.seen", true);
   const touch = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
-  setTimeout(() => say(touch ? "手指拖过去和它们互动，轻点一下就是点击 · 底下的方块按钮看全部"
-                             : "移动鼠标和它们互动 · <kbd>←</kbd> <kbd>→</kbd> 换一个 · <kbd>G</kbd> 全部预设 · <kbd>P</kbd> 调参", 7000), 1200);
+  setTimeout(() => say(touch ? "Drag a finger through them to play, tap to click · the squares button shows them all"
+                             : "Move the mouse to play · <kbd>←</kbd> <kbd>→</kbd> next / previous · <kbd>G</kbd> all presets · <kbd>P</kbd> tune", 7000), 1200);
 }
 requestAnimationFrame(loop);
 window.DU_APP = app;                                       // for the console

@@ -226,23 +226,34 @@ def pendulum_rate(s, m2, l2, g):
 
 # ------------------------------------------------------------------ text
 
-DEFAULT_FONTS = ("pingfang,pingfangsc,hiraginosansgb,stheitimedium,heitisc,notosanscjksc,notosanscjk,"
-                 "sourcehansanssc,wenquanyimicrohei,microsoftyahei,arialunicode,arialunicodems,dejavusans")
-WEEKDAYS = "一二三四五六日"
+LATIN_FONTS = "helveticaneue,helvetica,avenirnext,arial,dejavusans,liberationsans"
+CJK_FONTS = ("pingfang,pingfangsc,hiraginosansgb,stheitimedium,heitisc,notosanscjksc,notosanscjk,"
+             "sourcehansanssc,wenquanyimicrohei,microsoftyahei,arialunicode,arialunicodems")
+MONTHS = ("January", "February", "March", "April", "May", "June", "July", "August", "September",
+          "October", "November", "December")
+WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 _FONTS: dict = {}
 
 
-def expand_text(template: str, t: float, period: float, now: datetime | None = None) -> str:
-    """Pick the line that is due (lines are separated by |) and fill in the clock."""
-    items = template.split("|") if template else [""]
-    line = items[int(t // max(period, 0.5)) % len(items)]
+def expand_text(template: str, page: int = 0, now: datetime | None = None) -> str:
+    """The text of one page (pages are separated by |), with the clock filled in."""
+    pages = template.split("|") if template else [""]
+    line = pages[page % len(pages)]
     if "{" in line:
         now = now or datetime.now()
         line = (line.replace("{seconds}", now.strftime("%H:%M:%S"))
                     .replace("{time}", now.strftime("%H:%M"))
-                    .replace("{date}", f"{now.month}月{now.day}日")
-                    .replace("{weekday}", "星期" + WEEKDAYS[now.weekday()]))
+                    .replace("{date}", f"{MONTHS[now.month - 1]} {now.day}")
+                    .replace("{weekday}", WEEKDAYS[now.weekday()]))
     return line.replace("\\n", "\n")
+
+
+def font_names(text: str, fonts: str = "") -> str:
+    """The fonts to try, in order: the layer's own, then a default that can draw this text
+    (pygame takes the first one installed, so CJK text must not land on a Latin font)."""
+    cjk = any(ord(c) >= 0x2E80 for c in text)
+    default = f"{CJK_FONTS},{LATIN_FONTS}" if cjk else f"{LATIN_FONTS},{CJK_FONTS}"
+    return f"{fonts.strip()},{default}" if fonts.strip() else default
 
 
 def _font(names, px):
@@ -259,7 +270,7 @@ def _font(names, px):
 def text_points(text: str, n: int, world, size: float, pos, fonts: str, rng) -> np.ndarray:
     """n points spread over the pixels of `text`, centred at `pos` (screen fractions)."""
     W, H = world
-    names = (fonts.strip() + "," + DEFAULT_FONTS) if fonts.strip() else DEFAULT_FONTS
+    names = font_names(text, fonts)
     lines = text.split("\n") or [" "]
     px = max(8, int(size * H))
     for _ in range(4):                                   # shrink until it fits the screen
@@ -1056,6 +1067,7 @@ class Universe:
         self.t = 0.0
         self.frame = 0
         self.dark = 1.0
+        self.pages: dict = {}                   # text: (seconds per page, click turns) -> [page, turned at]
         self.swarms: list[Swarm] = []
         self._veil = self._one = None
         self.reconfigure(preset)
@@ -1136,6 +1148,24 @@ class Universe:
             w = d / n * strength * k if n > 1e-6 else np.zeros(2)
         return w
 
+    @staticmethod
+    def _page_key(L):
+        return max(float(L.text_period), 0.5), bool(L.text_click)
+
+    def _turn_pages(self, t):
+        """Text layers with the same seconds per page share one page counter, so a poem and its
+        title turn together; the counter turns when its time is up, or on a click if it may."""
+        live = {self._page_key(s.layer) for s in self.swarms if s.layer.spawn == "text"}
+        for key in list(self.pages):
+            if key not in live:
+                del self.pages[key]
+        for key in live:
+            page = self.pages.setdefault(key, [0, t])
+            period, click = key
+            if (click and self.mouse.clicked) or t - page[1] >= period - 1e-9:
+                page[0] += 1
+                page[1] = t
+
     def step(self):
         p = self.p
         self.dark = self._breath()
@@ -1144,13 +1174,14 @@ class Universe:
         mouse_sign = -1.0 if (p.click_invert and self.mouse.pressed) else 1.0
         wind = self._wind()
         t = self.t
+        self._turn_pages(t)
 
         for swarm in self.swarms:
             L = swarm.layer
             if not len(swarm):
                 continue
             if L.spawn == "text":
-                text = expand_text(L.text, t, L.text_period)
+                text = expand_text(L.text, self.pages[self._page_key(L)][0])
                 if text != swarm.text_key:
                     swarm.retarget(text)
             if L.click_burst and self.mouse.clicked:

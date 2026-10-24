@@ -134,13 +134,13 @@ def test_live_reconfigure_keeps_bodies():
 
 def test_library_crud(tmp_path):
     lib = presets.Library(tmp_path)
-    key = lib.save("我的 星系", presets.get("galaxy"))
-    assert key in lib.custom and lib.get(key).title == "我的 星系"
+    key = lib.save("My Galaxy", presets.get("galaxy"))
+    assert key == "My_Galaxy" and key in lib.custom and lib.get(key).title == "My Galaxy"
     p = lib.get(key); p.friction = 0.01
     assert lib.save(key, p) == key and presets.Library(tmp_path).get(key).friction == 0.01   # update
-    new = lib.rename(key, "宇宙")
-    assert new == "宇宙" and key not in lib.custom and (tmp_path / "宇宙.json").exists()
-    assert lib.delete(new) and not (tmp_path / "宇宙.json").exists()
+    new = lib.rename(key, "Café Cosmos")                            # names need not be ASCII
+    assert new == "Café_Cosmos" and key not in lib.custom and (tmp_path / "Café_Cosmos.json").exists()
+    assert lib.delete(new) and not (tmp_path / "Café_Cosmos.json").exists()
     with pytest.raises(ValueError):
         lib.save("galaxy", presets.get("galaxy"))                 # built-in names are reserved
     lib.remember("mandala")

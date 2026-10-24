@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="zh">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>DesktopUniverse · 粒子宇宙</title>
-<meta name="description" content="41 个可以用鼠标玩的粒子宇宙：星系、黏菌、雪花、蝴蝶效应、混沌摆、星尘时钟……一个 macOS 动态壁纸的网页版。">
-<meta property="og:title" content="DesktopUniverse · 粒子宇宙">
-<meta property="og:description" content="41 个可以用鼠标玩的粒子宇宙，macOS 动态壁纸的网页版">
+<title>DesktopUniverse · particle universes</title>
+<meta name="description" content="41 particle universes to play with the mouse: galaxies, slime mould, snowflakes, the butterfly effect, chaos pendulums, a stardust clock… The web version of a macOS live wallpaper.">
+<meta property="og:title" content="DesktopUniverse · particle universes">
+<meta property="og:description" content="41 particle universes to play with the mouse: the web version of a macOS live wallpaper">
 <meta property="og:image" content="thumbs/galaxy.jpg">
 <meta name="theme-color" content="#000000">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23000'/%3E%3Cpath d='M32 8l5 19 19 5-19 5-5 19-5-19-19-5 19-5z' fill='%23e9c27b'/%3E%3C/svg%3E">
@@ -14,7 +14,7 @@
   :root {
     --glass: rgba(14, 16, 22, .72); --glass2: rgba(22, 25, 33, .9); --line: rgba(255, 255, 255, .09);
     --text: #e6e9ef; --muted: #8d95a5; --faint: #5d6574; --accent: #e9c27b; --warn: #f0896b; --ok: #84d39a;
-    --font: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
     --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   }
   * { box-sizing: border-box; }
@@ -26,12 +26,12 @@
   button { background: transparent; border: 0; cursor: pointer; padding: 0; }
 
   /* ------------------------------------------------ title card */
-  #hud { position: fixed; left: 22px; top: 18px; max-width: min(520px, calc(100vw - 44px)); pointer-events: none;
+  #hud { position: fixed; left: 22px; top: 18px; max-width: min(560px, calc(100vw - 44px)); pointer-events: none;
          transition: opacity .8s ease; text-shadow: 0 1px 12px rgba(0, 0, 0, .9); }
   #hud.dim { opacity: .0; }
   #hud .brand { font-size: 12px; letter-spacing: .14em; color: var(--muted); text-transform: uppercase; }
   #hud .brand b { color: var(--accent); font-weight: 600; }
-  #hud h1 { margin: 2px 0 4px; font-size: 26px; font-weight: 600; letter-spacing: .04em; }
+  #hud h1 { margin: 2px 0 4px; font-size: 26px; font-weight: 600; letter-spacing: .01em; }
   #hud h1 .slot { font-size: 13px; color: var(--faint); font-weight: 500; margin-left: 8px; letter-spacing: 0; }
   #hud p { margin: 0; color: #c4c9d3; font-size: 13.5px; line-height: 1.6; }
 
@@ -124,7 +124,7 @@
   #form summary .small { white-space: nowrap; flex: none; }
   #form summary .spacer { flex: 1; }
   #form .body { padding: 2px 10px 9px; }
-  #form .row { display: grid; grid-template-columns: 112px 1fr; gap: 8px; align-items: center; padding: 2px 0; }
+  #form .row { display: grid; grid-template-columns: 146px 1fr; gap: 8px; align-items: center; padding: 2px 0; }
   #form .row > label { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #form .num { display: grid; grid-template-columns: 1fr 74px; gap: 6px; align-items: center; }
   #form .num input[type=number] { width: 74px; padding: 1px 4px; }
@@ -136,7 +136,7 @@
   #form input[type=color] { width: 44px; height: 22px; padding: 0 2px; background: none; border: 1px solid #2c3240; border-radius: 5px; }
   #form input[type=text] { width: 100%; padding: 2px 6px; }
   #form .inline { display: flex; gap: 6px; align-items: center; }
-  #form .hint { color: var(--faint); font-size: 11.5px; margin: 0 0 3px 120px; }
+  #form .hint { color: var(--faint); font-size: 11.5px; margin: 0 0 3px 154px; }
   #form .sub { color: var(--accent); font-size: 12px; margin: 12px 0 4px; font-weight: 600; }
   #form .pull { border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px; margin: 7px 0; background: rgba(0, 0, 0, .2); }
   #form .pull.off { opacity: .5; }
@@ -163,54 +163,58 @@
 <div id="fps"></div>
 <div id="toast"></div>
 
-<nav id="bar" aria-label="控制">
-  <button id="bPrev" title="上一个（←）"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
-  <button id="bTitle" title="全部预设（G）"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg><span class="label" id="barTitle"></span></button>
-  <button id="bNext" title="下一个（→）"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+<nav id="bar" aria-label="Controls">
+  <button id="bPrev" title="Previous (←)"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+  <button id="bTitle" title="All presets (G)"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg><span class="label" id="barTitle"></span></button>
+  <button id="bNext" title="Next (→)"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
   <span class="sep"></span>
-  <button id="bPause" title="暂停（空格）"><svg viewBox="0 0 24 24" id="iPause"><path d="M8 5v14M16 5v14"/></svg><span class="label" id="lPause">暂停</span></button>
-  <button id="bClear" class="wide" title="清屏（C）"><svg viewBox="0 0 24 24"><path d="M5 19h14M7 15l8-10 4 3-8 10H7z"/></svg><span class="label">清屏</span></button>
-  <button id="bRestart" title="重新开始（R）"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4"/></svg><span class="label">重开</span></button>
+  <button id="bPause" title="Pause (Space)"><svg viewBox="0 0 24 24" id="iPause"><path d="M8 5v14M16 5v14"/></svg><span class="label" id="lPause">Pause</span></button>
+  <button id="bClear" class="wide" title="Clear the screen (C)"><svg viewBox="0 0 24 24"><path d="M5 19h14M7 15l8-10 4 3-8 10H7z"/></svg><span class="label">Clear</span></button>
+  <button id="bRestart" title="Restart (R)"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4"/></svg><span class="label">Restart</span></button>
   <span class="sep"></span>
-  <button id="bRotate" title="自动轮播：每 30 秒换一个"><svg viewBox="0 0 24 24"><path d="M17 3l3 3-3 3M20 6H9a5 5 0 0 0-5 5M7 21l-3-3 3-3M4 18h11a5 5 0 0 0 5-5"/></svg><span class="label">轮播</span></button>
-  <button id="bTune" title="调参（P）"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span class="label">调参</span></button>
-  <button id="bFull" class="wide" title="全屏（F）"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
-  <button id="bGithub" class="wide" title="源代码（桌面版）"><svg viewBox="0 0 24 24"><path d="M9 19c-4 1.5-4-2-6-2.5M15 21v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1-.3-3.4 1.3a11.6 11.6 0 0 0-6.2 0C6.6 2.8 5.6 3.1 5.6 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4.2 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></button>
+  <button id="bRotate" title="Slideshow: a new preset every 30 seconds"><svg viewBox="0 0 24 24"><path d="M17 3l3 3-3 3M20 6H9a5 5 0 0 0-5 5M7 21l-3-3 3-3M4 18h11a5 5 0 0 0 5-5"/></svg><span class="label">Slideshow</span></button>
+  <button id="bTune" title="Tune (P)"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span class="label">Tune</span></button>
+  <button id="bFull" class="wide" title="Full screen (F)"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  <button id="bGithub" class="wide" title="Source code (and the desktop version)"><svg viewBox="0 0 24 24"><path d="M9 19c-4 1.5-4-2-6-2.5M15 21v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1-.3-3.4 1.3a11.6 11.6 0 0 0-6.2 0C6.6 2.8 5.6 3.1 5.6 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4.2 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></button>
 </nav>
 
-<div id="gallery" class="overlay" role="dialog" aria-label="全部预设">
+<div id="gallery" class="overlay" role="dialog" aria-label="All presets">
   <div class="wrap">
     <header>
       <div>
         <h2><b>Desktop</b>Universe</h2>
-        <p class="about">41 个粒子宇宙，每一个都只是几百字节的参数，跑在同一个引擎上：引力和漩涡、鸟群和鱼群、会自己长的雪花、
-          会找食物的黏菌、三维奇异吸引子、九百个双摆、用星尘写的时钟和唐诗……移动鼠标、按住、点击，都会和它们互动。
-          它原本是一个 macOS 动态壁纸（Python），这里是同一个引擎移植到浏览器的版本，
-          <a href="https://github.com/AlexW6385/DesktopUniverse" target="_blank" rel="noopener">源代码和桌面版在 GitHub</a>。
-          键盘：<kbd>←</kbd> <kbd>→</kbd> 换一个 · <kbd>1</kbd>–<kbd>9</kbd> 精选 · <kbd>空格</kbd> 暂停 · <kbd>C</kbd> 清屏 ·
-          <kbd>R</kbd> 重开 · <kbd>P</kbd> 调参 · <kbd>H</kbd> 隐藏界面 · <kbd>F</kbd> 全屏</p>
+        <p class="about">41 particle universes, each one only a few hundred bytes of settings running on the same
+          engine: gravity and vortices, flocks and schools, snowflakes that grow themselves, slime mould that finds food,
+          3D strange attractors, nine hundred double pendulums, a clock and poems written in stardust… Move the mouse,
+          hold it down or click to play with them. It started as a macOS live wallpaper (Python); this is the same
+          engine ported to the browser, and
+          <a href="https://github.com/AlexW6385/DesktopUniverse" target="_blank" rel="noopener">the source and the
+          desktop version are on GitHub</a>.
+          Keys: <kbd>←</kbd> <kbd>→</kbd> next / previous · <kbd>1</kbd>–<kbd>9</kbd> favourites ·
+          <kbd>Space</kbd> pause · <kbd>C</kbd> clear · <kbd>R</kbd> restart · <kbd>P</kbd> tune ·
+          <kbd>H</kbd> hide the interface · <kbd>F</kbd> full screen</p>
       </div>
-      <button class="close" id="gClose" title="关闭（Esc）">×</button>
+      <button class="close" id="gClose" title="Close (Esc)">×</button>
     </header>
     <div id="gGroups"></div>
   </div>
 </div>
 
-<aside id="panel" aria-label="调参">
+<aside id="panel" aria-label="Tune">
   <div class="head">
-    <div class="row1"><h2>调参</h2><button class="x" id="pClose" title="关闭（Esc）">×</button></div>
-    <select id="panelSel" title="预设"></select>
+    <div class="row1"><h2>Tune</h2><button class="x" id="pClose" title="Close (Esc)">×</button></div>
+    <select id="panelSel" title="Preset"></select>
     <div class="tools">
-      <button id="pNew" title="从一个空白预设开始">新建</button>
-      <button id="pSave" title="把改动存回这个预设（只能存你自己的）">保存</button>
-      <button id="pSaveAs">另存为…</button>
-      <button id="pRename">重命名…</button>
-      <button id="pDelete" class="danger">删除</button>
-      <button id="pReset" title="丢掉没保存的改动">还原</button>
-      <button id="pExport" title="下载成 JSON：放进桌面版的 presets_user/ 文件夹就能用">导出</button>
-      <button id="pImport" title="读入一个 JSON 预设（桌面版的 presets_user/ 里的也行）">导入</button>
+      <button id="pNew" title="Start from a blank preset">New</button>
+      <button id="pSave" title="Save the changes into this preset (only your own)">Save</button>
+      <button id="pSaveAs">Save as…</button>
+      <button id="pRename">Rename…</button>
+      <button id="pDelete" class="danger">Delete</button>
+      <button id="pReset" title="Throw away the unsaved changes">Revert</button>
+      <button id="pExport" title="Download as JSON: drop it into the desktop version's presets_user/ folder">Export</button>
+      <button id="pImport" title="Open a JSON preset (the desktop version's presets_user/ files work too)">Import</button>
     </div>
-    <div id="namebox"><input id="nameInput" type="text"><button id="nameOk" class="small">确定</button></div>
+    <div id="namebox"><input id="nameInput" type="text"><button id="nameOk" class="small">OK</button></div>
     <div id="pdesc"></div>
     <div id="pstatus"></div>
   </div>
@@ -219,7 +223,7 @@
 </aside>
 
 <div id="fatal"></div>
-<noscript><div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#888">需要开启 JavaScript</div></noscript>
+<noscript><div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#888">This needs JavaScript</div></noscript>
 
 <script src="data.js"></script>
 <script src="js/engine.js"></script>

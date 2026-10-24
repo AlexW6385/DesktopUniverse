@@ -9,7 +9,7 @@ that can be stacked into layers and tuned live from a browser panel.
 
 ![all presets](docs/all.jpg)
 
-41 built-in universes in six groups (宇宙 · 自然 · 混沌 · 几何 · 互动 · 文字), picked
+41 built-in universes in six groups (Cosmos · Nature · Chaos · Geometry · Interactive · Words), picked
 from the menu bar; nine of them also sit on hotkeys 1–9. Every one is a few hundred
 bytes of parameters over the same engine, and the panel lets you make your own.
 
@@ -29,10 +29,10 @@ python universe.py --list
 
 Control it without leaving the wallpaper (the panel is only for editing and never opens by itself):
 
-- **the menu bar ✦**: every preset by group plus your own, next / previous, **自动轮换**
-  (rotate every 5 / 15 / 30 / 60 minutes, in order or **随机顺序**), pause, **被窗口盖住时暂停**
-  (the simulation sleeps while windows cover the desktop or you are on another Space, so it costs
-  nothing while you work), clear, restart, **登录时自动启动** (start at login), the panel, quit
+- **the menu bar ✦**: every preset by group plus your own, next / previous, **Rotate presets**
+  (every 5 / 15 / 30 / 60 minutes, in order or in **Random order**), pause, **Pause when covered by
+  windows** (the simulation sleeps while windows cover the desktop or you are on another Space, so it
+  costs nothing while you work), clear, restart, **Start at login**, the panel, quit
 - **hotkeys**: `⌃⌥1`–`⌃⌥9` presets, `⌃⌥←` / `⌃⌥→` previous / next, `⌃⌥P` pause, `⌃⌥C` clear,
   `⌃⌥R` restart. macOS asks for Accessibility permission for the app that runs Python
   (System Settings → Privacy & Security → Accessibility → your terminal)
@@ -68,7 +68,7 @@ flagged in the panel).
 | **Home** | a spring back to the birth position; with grid spawning, an elastic sheet; on a path, an elastic curve the cursor can push |
 | **Life** | particles die and are reborn; synced lifetimes plus teleporting parents make fireworks |
 | **Births** | on (or in a ring around) the bodies of the layer above, at or around the cursor, on the pixels of a line of text; a click can burst particles out at the cursor; bursts can be a 3D shell seen head-on |
-| **Text** | bodies spring to the glyphs of a line of text; lines separated by `\|` take turns, `{time}` `{date}` `{weekday}` are filled in live, so a swarm can be a clock or a poem |
+| **Text** | bodies spring to the glyphs of a few lines of text; pages separated by `\|` take turns (on a timer, and on a click if you like; text layers with the same timing turn together, so a poem keeps its title), `{time}` `{date}` `{weekday}` are filled in live, so a swarm can be a clock or a poem |
 | **Motion** | physics, wander, paths (Lissajous, rose, Spirograph, sunflower: Vogel's golden-angle spiral), a morphing Clifford / de Jong attractor, **3D attractors** (Lorenz, Aizawa, Thomas, Halvorsen, Rössler) in perspective that the cursor turns, **double pendulums**, **crystal growth** (diffusion-limited aggregation with noise reduction, grown in one wedge and mirrored into a snowflake), **slime mould** (Physarum agents that smell a scent map, turn toward it and lay more), teleport, fixed |
 | **World** | flow field (as wind, or as a current that carries), gravity / wind (fixed, or tilting toward the cursor), walls (wrap, bounce, respawn), friction shape, linear damping (1 = no momentum: bodies walk down field lines), per-body variety, speed limits, temperature, a breathing light |
 | **Paint** | trails from none to minutes long (fading fully to the background, dark or paper), additive glow, soft glowing dots, per-body twinkle, lines between neighbours (all in range or the nearest few, everywhere or only around the cursor), kaleidoscope symmetry with mirror, colour by palette drift, speed, direction, age, rainbow, the moment of birth or position in the layer |
@@ -80,18 +80,18 @@ the schema at the bottom of that file.
 
 | Group | Presets |
 | --- | --- |
-| 宇宙 | 双星系 ¹ · 星轨 ⁴ · 黑洞 · 彗星 · 超新星 · 土星环 · 曲速 · 星座 |
-| 自然 | 鸟群 ⁵ · 雪景球 ⁸ · 烟花 ⁹ · 冰晶 · 黏菌 · 极光 · 鱼群 · 萤火虫 · 蒲公英 · 篝火 · 鬼火 |
-| 混沌 | 奇异吸引子 ² · 蝴蝶效应 · 苹果核 · 混沌摆 · 掌中宇宙 |
-| 几何 | 曼陀罗 ³ · 向日葵 · 电场线 · 万花筒 · 谐振子 · 原子 · 心跳 |
-| 互动 | 弹性布 ⁶ · 墨流 ⁷ · 水彩 · 星尘笔 · 香烟 · 涟漪 · 精灵 · 弹珠 |
-| 文字 | 星尘时钟 · 诗 |
+| Cosmos | Binary Galaxy ¹ · Orrery ⁴ · Black Hole · Comets · Supernova · Saturn's Rings · Warp Speed · Constellations |
+| Nature | Murmuration ⁵ · Snow Globe ⁸ · Fireworks ⁹ · Snowflake · Slime Mould · Aurora · School of Fish · Fireflies · Dandelion · Campfire · Will-o'-the-Wisp |
+| Chaos | Strange Attractor ² · Butterfly Effect · Apple Core · Chaos Pendulums · Pocket Universe |
+| Geometry | Mandala ³ · Sunflower · Field Lines · Kaleidoscope · Harmonics · Atom · Heartbeat |
+| Interactive | Elastic Fabric ⁶ · Marbled Ink ⁷ · Watercolour · Stardust Pen · Incense · Ripples · Sprites · Marbles |
+| Words | Stardust Clock · Poems (public-domain verse; click for the next one) |
 
 Superscripts are the hotkey slots. Each preset's description (what it is
 made of, and what the mouse does to it) shows in the panel. The built-ins are
 read-only; your own presets are JSON files in `presets_user/`, created from
-the panel: **新建** (blank), **保存** (update), **另存为** (create), **重命名**,
-**删除**. Unsaved edits are autosaved every few seconds as **上次的实验**, and
+the panel: **New** (blank), **Save** (update), **Save as** (create), **Rename**,
+**Delete**. Unsaved edits are autosaved every few seconds as **Last experiment**, and
 the app reopens on the preset you used last.
 
 ## Web version
@@ -99,13 +99,13 @@ the app reopens on the preset you used last.
 `web/` is the same universe in a browser: the engine ported to JavaScript (`web/js/engine.js`), drawn
 with WebGL (`web/js/render.js`), with a gallery of every preset, autoplay and the same tuning panel
 (`web/js/panel.js`, built from the same schema). Presets you make there are kept in the browser, and
-**导出** downloads them as JSON that the desktop app reads from `presets_user/` (and **导入** reads
+**Export** downloads them as JSON that the desktop app reads from `presets_user/` (and **Import** reads
 those files back).
 
 The presets themselves are not copied by hand: `python web/export.py` writes them, the groups, the
 hotkey slots and the panel schema from `presets.py` and `config.py` into `web/data.js` (and makes the
 gallery thumbnails from `docs/`). On every push to `main`, a GitHub Action runs the export and
-publishes `web/` to the `gh-pages` branch, which GitHub Pages serves. To try it locally:
+publishes `web/` to GitHub Pages. To try it locally (opening `web/index.html` directly works too):
 
 ```bash
 python web/export.py

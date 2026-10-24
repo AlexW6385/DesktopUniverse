@@ -66,7 +66,7 @@ class Renderer {
     const opts = { alpha: false, antialias: false, depth: false, stencil: false, premultipliedAlpha: false,
                    preserveDrawingBuffer: false, powerPreference: "high-performance" };
     const gl = canvas.getContext("webgl2", opts) || canvas.getContext("webgl", opts);
-    if (!gl) throw new Error("这个浏览器不支持 WebGL");
+    if (!gl) throw new Error("this browser has no WebGL");
     this.gl = gl; this.canvas = canvas;
     this.fade = this.program(VS_QUAD, FS_FADE);
     this.copy = this.program(VS_QUAD, FS_COPY);

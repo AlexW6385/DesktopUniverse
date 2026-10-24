@@ -92,12 +92,37 @@ def test_tilt_points_gravity_at_the_cursor():
 
 # ------------------------------------------------------------------ text
 
-def test_expand_text_cycles_and_fills_the_clock():
+def test_expand_text_picks_the_page_and_fills_the_clock():
     now = datetime(2026, 10, 23, 9, 5, 7)                           # a Friday
-    assert engine.expand_text("{time}", 0, 8, now) == "09:05"
-    assert engine.expand_text("{seconds}", 0, 8, now) == "09:05:07"
-    assert engine.expand_text("{date} {weekday}", 0, 8, now) == "10月23日 星期五"
-    assert [engine.expand_text("a|b|c", t, 5) for t in (0, 5, 10, 15)] == ["a", "b", "c", "a"]
+    assert engine.expand_text("{time}", 0, now) == "09:05"
+    assert engine.expand_text("{seconds}", 0, now) == "09:05:07"
+    assert engine.expand_text("{weekday}, {date}", 0, now) == "Friday, October 23"
+    assert [engine.expand_text("a|b|c", page) for page in range(4)] == ["a", "b", "c", "a"]
+    assert engine.expand_text("one\\ntwo") == "one\ntwo"
+
+
+def test_cjk_text_gets_a_font_that_can_draw_it():
+    assert engine.font_names("Hope").startswith(engine.LATIN_FONTS)
+    assert engine.font_names("静夜思").startswith(engine.CJK_FONTS)
+    assert engine.font_names("Hope", "baskerville").startswith("baskerville,")
+
+
+def test_pages_turn_on_time_and_on_a_click_and_stay_matched():
+    def page(name, text, click=True):
+        return Layer(name, 300, [], spawn="text", text=text, text_period=2.0, text_click=click,
+                     home=0.03, velocity="zero")
+    u, cur = world([page("poem", "a|b|c"), page("title", "A|B|C"), page("still", "x|y|z", click=False)])
+    shown = lambda: [s.text_key for s in u.swarms]
+    run(u, 2)
+    assert shown() == ["a", "A", "x"]
+    cur.down = True; run(u, 1); cur.down = False; run(u, 3)       # one click turns the clickable ones
+    assert shown() == ["b", "B", "x"]
+    cur.down = True; run(u, 30); cur.down = False                  # holding is still one click (at 0.1 s)
+    assert shown() == ["c", "C", "x"]
+    run(u, 87)                                                       # past 2 s: the unclickable one has turned
+    assert shown() == ["c", "C", "y"]
+    run(u, 10)                                                       # 2.2 s: the clickable ones, 2 s after their click
+    assert shown() == ["a", "A", "y"]
 
 
 def test_text_bodies_settle_on_the_glyphs():

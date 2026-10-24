@@ -243,30 +243,41 @@ function pendRate(th1, w1, th2, w2, m2, l2, g, o, k) {
 
 // ------------------------------------------------------------------ text
 
-const SANS = '"PingFang SC","Hiragino Sans GB","Heiti SC","Microsoft YaHei","Noto Sans CJK SC","Source Han Sans SC","WenQuanYi Micro Hei",sans-serif';
-const SERIF = '"Songti SC","STSong","Noto Serif CJK SC","Source Han Serif SC","SimSun",serif';
-const WEEKDAYS = "一二三四五六日";
+// the browser falls back glyph by glyph, so one stack serves Latin and CJK text alike
+const SANS = '"Helvetica Neue",Helvetica,Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC",sans-serif';
+const SERIF = 'Baskerville,"Baskerville Old Face","Palatino Linotype",Palatino,"Book Antiqua",Georgia,"Times New Roman",' +
+              '"Songti SC","STSong","Noto Serif CJK SC",serif';
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
+                "November", "December"];
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-/** Pick the line that is due (lines are separated by |) and fill in the clock. */
-function expandText(template, t, period, now) {
-  const items = template ? template.split("|") : [""];
-  let line = items[Math.floor(t / Math.max(period, 0.5)) % items.length];
+/** The text of one page (pages are separated by |), with the clock filled in. */
+function expandText(template, page = 0, now) {
+  const pages = template ? template.split("|") : [""];
+  let line = pages[page % pages.length];
   if (line.includes("{")) {
     now = now || new Date();
     const p2 = (v) => String(v).padStart(2, "0");
     const hh = p2(now.getHours()), mm = p2(now.getMinutes()), ss = p2(now.getSeconds());
     line = line.split("{seconds}").join(`${hh}:${mm}:${ss}`).split("{time}").join(`${hh}:${mm}`)
-      .split("{date}").join(`${now.getMonth() + 1}月${now.getDate()}日`)
-      .split("{weekday}").join("星期" + WEEKDAYS[(now.getDay() + 6) % 7]);
+      .split("{date}").join(`${MONTHS[now.getMonth()]} ${now.getDate()}`)
+      .split("{weekday}").join(WEEKDAYS[now.getDay()]);
   }
   return line.split("\\n").join("\n");
+}
+
+/** The layer's own fonts (the desktop's system names, quoted) ahead of a sans or serif stack. */
+function fontStack(fonts) {
+  const own = (fonts || "").split(",").map((s) => s.trim()).filter(Boolean);
+  const serif = own.some((f) => /song|serif|kai|ming|baskerville|palatino|georgia|times|garamond|hoefler/i.test(f));
+  return [...own.map((f) => JSON.stringify(f)), serif ? SERIF : SANS].join(",");
 }
 
 let textCanvas = null;
 /** n points spread over the pixels of `text`, centred at `pos` (screen fractions). */
 function textPoints(text, n, W, H, size, pos, fonts, rng) {
   const lines = text.split("\n");
-  const stack = /song|serif|kai|ming|fangsong/i.test(fonts || "") ? SERIF : SANS;
+  const stack = fontStack(fonts);
   textCanvas = textCanvas || document.createElement("canvas");
   const ctx = textCanvas.getContext("2d", { willReadFrequently: true });
   let px = Math.max(8, Math.floor(size * H)), w = 1, lh = 1, h = 1;
@@ -1020,7 +1031,26 @@ class Universe {
     this.rng = makeRng(seed === undefined ? (Math.random() * 4294967296) >>> 0 : seed);
     this.mouse = mouse; this.mouse.update();
     this.p = preset; this.t = 0; this.frame = 0; this.dark = 1; this.swarms = [];
+    this.pages = new Map();                                // text: "period|click" -> {page, at}
     this.reconfigure(preset);
+  }
+
+  static pageKey(L) { return `${Math.max(+L.text_period, 0.5)}|${!!L.text_click}`; }
+
+  /** Text layers with the same seconds per page share one page counter, so a poem and its title
+      turn together; the counter turns when its time is up, or on a click if it may. */
+  turnPages(t) {
+    const live = new Map();
+    for (const s of this.swarms) {
+      const L = s.layer;
+      if (L.spawn === "text") live.set(Universe.pageKey(L), [Math.max(+L.text_period, 0.5), !!L.text_click]);
+    }
+    for (const k of [...this.pages.keys()]) if (!live.has(k)) this.pages.delete(k);
+    for (const [k, [period, click]] of live) {
+      let pg = this.pages.get(k);
+      if (!pg) { pg = { page: 0, at: t }; this.pages.set(k, pg); }
+      if ((click && this.mouse.clicked) || t - pg.at >= period - 1e-9) { pg.page++; pg.at = t; }
+    }
   }
 
   /** Swap in new settings without a restart; bodies keep moving. Layers match by name (or position). */
@@ -1101,12 +1131,13 @@ class Universe {
     const mouseSign = p.click_invert && m.pressed ? -1 : 1;
     const [wx, wy] = this.wind();
     const t = this.t;
+    this.turnPages(t);
 
     for (const sw of this.swarms) {
       const L = sw.layer, n = sw.n;
       if (!n) continue;
       if (L.spawn === "text") {
-        const text = expandText(L.text, t, L.text_period);
+        const text = expandText(L.text, this.pages.get(Universe.pageKey(L)).page);
         if (text !== sw.textKey) sw.retarget(text);
       }
       if (L.click_burst && m.clicked) sw.burstAt([m.x, m.y], L.click_burst);
