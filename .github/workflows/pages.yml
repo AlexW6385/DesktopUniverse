@@ -1,7 +1,9 @@
 name: Publish the web version
 
 # Every push to main that touches the web version or the presets re-exports the presets
-# (web/export.py) and publishes web/ to the gh-pages branch, which GitHub Pages serves.
+# (web/export.py) and publishes web/ to GitHub Pages. Works with either Pages setting:
+#   Source "GitHub Actions"         -> the deploy job below
+#   Source "Deploy from a branch"   -> the gh-pages branch pushed by the build job
 on:
   push:
     branches: [main]
@@ -10,9 +12,15 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
 
 jobs:
-  publish:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,7 +29,7 @@ jobs:
           python-version: "3.12"
       - name: Export the presets
         run: python web/export.py
-      - name: Push web/ to gh-pages
+      - name: Push web/ to the gh-pages branch
         run: |
           cd web
           git init -q -b gh-pages
@@ -30,3 +38,19 @@ jobs:
           git add -A
           git commit -q -m "Publish ${GITHUB_SHA::7}"
           git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
+          rm -rf .git
+      - name: Package the site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    continue-on-error: true          # with a branch source there is nothing to do here
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
